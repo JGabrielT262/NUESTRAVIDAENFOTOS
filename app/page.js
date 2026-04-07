@@ -40,6 +40,9 @@ export default function Home() {
   const [selectedImage, setSelectedImage] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   
+  // Sort stories chronological (oldest to newest)
+  const historiasOrdenadas = [...imagenes].slice(0, 15).reverse()
+  
   // Auth states
   const [inputClave, setInputClave] = useState("")
   const [loginError, setLoginError] = useState(false)
@@ -403,7 +406,7 @@ export default function Home() {
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Añadir</span>
               </div>
               
-              {imagenes.slice(0, 10).map((img, i) => (
+              {historiasOrdenadas.map((img, i) => (
                 <motion.div 
                   key={`story-${img.id}`}
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -694,7 +697,7 @@ export default function Home() {
             >
               {/* Progress Bars */}
               <div className="absolute top-4 left-4 right-4 flex gap-1.5 z-50">
-                {imagenes.slice(0, 10).map((_, idx) => (
+                {historiasOrdenadas.map((_, idx) => (
                   <div key={`bar-${idx}`} className="h-[2px] flex-1 bg-white/20 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
@@ -707,7 +710,7 @@ export default function Home() {
                       }}
                       onAnimationComplete={() => {
                         if (idx === selectedStoryIndex) {
-                          if (selectedStoryIndex < Math.min(imagenes.length, 10) - 1) {
+                          if (selectedStoryIndex < historiasOrdenadas.length - 1) {
                             setSelectedStoryIndex(selectedStoryIndex + 1)
                           } else {
                             setSelectedStoryIndex(null)
@@ -724,12 +727,12 @@ export default function Home() {
               <div className="absolute top-8 left-4 right-4 flex items-center justify-between z-50">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full border-2 border-romantic-400 p-[2px] bg-white/10 overflow-hidden">
-                    <img src={imagenes[selectedStoryIndex].url} className="w-full h-full object-cover rounded-full" alt="Avatar" />
+                    <img src={historiasOrdenadas[selectedStoryIndex].url} className="w-full h-full object-cover rounded-full" alt="Avatar" />
                   </div>
                   <div className="drop-shadow-md">
                     <p className="text-sm font-bold text-white">Nuestra Historia</p>
                     <p className="text-[10px] text-white/70 font-medium">
-                      {new Date(imagenes[selectedStoryIndex].fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                      {new Date(historiasOrdenadas[selectedStoryIndex].fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
                     </p>
                   </div>
                 </div>
@@ -752,7 +755,7 @@ export default function Home() {
                 <div 
                   className="flex-1 cursor-pointer" 
                   onClick={() => {
-                    if (selectedStoryIndex < Math.min(imagenes.length, 10) - 1) {
+                    if (selectedStoryIndex < historiasOrdenadas.length - 1) {
                       setSelectedStoryIndex(selectedStoryIndex + 1)
                     } else {
                       setSelectedStoryIndex(null)
@@ -765,11 +768,11 @@ export default function Home() {
               <div className="flex-1 flex items-center justify-center bg-black relative">
                 <AnimatePresence mode="wait">
                   <motion.img 
-                    key={imagenes[selectedStoryIndex].id}
+                    key={historiasOrdenadas[selectedStoryIndex].id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    src={imagenes[selectedStoryIndex].url} 
+                    src={historiasOrdenadas[selectedStoryIndex].url} 
                     className="max-h-full w-auto object-contain" 
                     alt="Full Story" 
                   />
@@ -778,23 +781,23 @@ export default function Home() {
 
               {/* Footer Info */}
               <div className="p-8 pb-12 bg-gradient-to-t from-black/95 via-black/60 to-transparent text-white z-50">
-                {imagenes[selectedStoryIndex].ubicacion && (
+                {historiasOrdenadas[selectedStoryIndex].ubicacion && (
                   <motion.div 
                     initial={{ y: 10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     className="flex items-center gap-2 mb-3 text-romantic-300 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md border border-white/5"
                   >
                     <MapPin className="w-3.5 h-3.5" />
-                    <span className="text-xs font-bold tracking-tight">{imagenes[selectedStoryIndex].ubicacion}</span>
+                    <span className="text-xs font-bold tracking-tight">{historiasOrdenadas[selectedStoryIndex].ubicacion}</span>
                   </motion.div>
                 )}
-                {imagenes[selectedStoryIndex].nota && (
+                {historiasOrdenadas[selectedStoryIndex].nota && (
                   <motion.p 
                     initial={{ y: 10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     className="text-lg italic font-medium leading-relaxed font-serif drop-shadow-lg"
                   >
-                    "{imagenes[selectedStoryIndex].nota}"
+                    "{historiasOrdenadas[selectedStoryIndex].nota}"
                   </motion.p>
                 )}
                 <div className="mt-8 flex justify-center">
