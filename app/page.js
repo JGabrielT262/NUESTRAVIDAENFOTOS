@@ -36,7 +36,7 @@ export default function Home() {
   const [uploading, setUploading] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [recuerdoDelDia, setRecuerdoDelDia] = useState(null)
-  const [selectedStory, setSelectedStory] = useState(null)
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   
@@ -410,7 +410,7 @@ export default function Home() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: i * 0.1 }}
                   className="flex flex-col items-center gap-2 min-w-[80px] cursor-pointer"
-                  onClick={() => setSelectedStory(img)}
+                  onClick={() => setSelectedStoryIndex(i)}
                 >
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] bg-gradient-to-tr from-romantic-300 via-romantic-500 to-romantic-600 shadow-md text-[0px]">
                     <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
@@ -671,68 +671,146 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Fullscreen Story Viewer */}
+      {/* Fullscreen Story Viewer (Instagram Style) */}
       <AnimatePresence>
-        {selectedStory && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 sm:p-6">
+        {selectedStoryIndex !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black sm:bg-black/90 sm:p-6"
+          >
             <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative w-full h-full max-w-lg bg-romantic-900 flex flex-col overflow-hidden sm:rounded-3xl"
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={0.7}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100) setSelectedStoryIndex(null)
+              }}
+              initial={{ scale: 0.9, y: 100, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 100, opacity: 0 }}
+              className="relative w-full h-full max-w-lg bg-[#1a1a1a] flex flex-col overflow-hidden sm:rounded-3xl shadow-2xl"
             >
-              <div className="absolute top-4 left-4 right-4 flex gap-1 z-10">
-                <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ x: "-100%" }}
-                    animate={{ x: 0 }}
-                    transition={{ duration: 5 }}
-                    onAnimationComplete={() => setSelectedStory(null)}
-                    className="h-full bg-white"
-                  />
-                </div>
+              {/* Progress Bars */}
+              <div className="absolute top-4 left-4 right-4 flex gap-1.5 z-50">
+                {imagenes.slice(0, 10).map((_, idx) => (
+                  <div key={`bar-${idx}`} className="h-[2px] flex-1 bg-white/20 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: idx === selectedStoryIndex ? "100%" : idx < selectedStoryIndex ? "100%" : "0%" 
+                      }}
+                      transition={{ 
+                        duration: idx === selectedStoryIndex ? 5 : 0, 
+                        ease: "linear" 
+                      }}
+                      onAnimationComplete={() => {
+                        if (idx === selectedStoryIndex) {
+                          if (selectedStoryIndex < Math.min(imagenes.length, 10) - 1) {
+                            setSelectedStoryIndex(selectedStoryIndex + 1)
+                          } else {
+                            setSelectedStoryIndex(null)
+                          }
+                        }
+                      }}
+                      className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+                    />
+                  </div>
+                ))}
               </div>
 
-              <div className="absolute top-8 left-4 right-4 flex items-center justify-between z-10 text-white">
+              {/* Story Header */}
+              <div className="absolute top-8 left-4 right-4 flex items-center justify-between z-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border-2 border-romantic-400 overflow-hidden">
-                    <img src={selectedStory.url} className="w-full h-full object-cover" alt="Avatar" />
+                  <div className="w-9 h-9 rounded-full border-2 border-romantic-400 p-[2px] bg-white/10 overflow-hidden">
+                    <img src={imagenes[selectedStoryIndex].url} className="w-full h-full object-cover rounded-full" alt="Avatar" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">Nuestra Historia</p>
-                    <p className="text-[10px] opacity-70">
-                      {new Date(selectedStory.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  <div className="drop-shadow-md">
+                    <p className="text-sm font-bold text-white">Nuestra Historia</p>
+                    <p className="text-[10px] text-white/70 font-medium">
+                      {new Date(imagenes[selectedStoryIndex].fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
                     </p>
                   </div>
                 </div>
                 <button 
-                  onClick={() => setSelectedStory(null)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                  onClick={() => setSelectedStoryIndex(null)}
+                  className="p-2 bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-colors text-white"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="flex-1 flex items-center justify-center bg-black">
-                <img src={selectedStory.url} className="max-h-full w-auto object-contain" alt="Full Story" />
+              {/* Navigation Areas */}
+              <div className="absolute inset-0 z-40 flex">
+                <div 
+                  className="flex-1 cursor-pointer" 
+                  onClick={() => {
+                    if (selectedStoryIndex > 0) setSelectedStoryIndex(selectedStoryIndex - 1)
+                  }}
+                />
+                <div 
+                  className="flex-1 cursor-pointer" 
+                  onClick={() => {
+                    if (selectedStoryIndex < Math.min(imagenes.length, 10) - 1) {
+                      setSelectedStoryIndex(selectedStoryIndex + 1)
+                    } else {
+                      setSelectedStoryIndex(null)
+                    }
+                  }}
+                />
               </div>
 
-              <div className="p-6 bg-gradient-to-t from-black/80 to-transparent text-white pt-20">
-                {selectedStory.ubicacion && (
-                  <div className="flex items-center gap-2 mb-2 text-romantic-300">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-bold">{selectedStory.ubicacion}</span>
-                  </div>
+              {/* Main Image */}
+              <div className="flex-1 flex items-center justify-center bg-black relative">
+                <AnimatePresence mode="wait">
+                  <motion.img 
+                    key={imagenes[selectedStoryIndex].id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    src={imagenes[selectedStoryIndex].url} 
+                    className="max-h-full w-auto object-contain" 
+                    alt="Full Story" 
+                  />
+                </AnimatePresence>
+              </div>
+
+              {/* Footer Info */}
+              <div className="p-8 pb-12 bg-gradient-to-t from-black/95 via-black/60 to-transparent text-white z-50">
+                {imagenes[selectedStoryIndex].ubicacion && (
+                  <motion.div 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="flex items-center gap-2 mb-3 text-romantic-300 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md border border-white/5"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold tracking-tight">{imagenes[selectedStoryIndex].ubicacion}</span>
+                  </motion.div>
                 )}
-                {selectedStory.nota && (
-                  <p className="text-base italic font-medium leading-relaxed">"{selectedStory.nota}"</p>
+                {imagenes[selectedStoryIndex].nota && (
+                  <motion.p 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="text-lg italic font-medium leading-relaxed font-serif drop-shadow-lg"
+                  >
+                    "{imagenes[selectedStoryIndex].nota}"
+                  </motion.p>
                 )}
-                <div className="mt-6 flex justify-center">
-                  <Heart className="w-8 h-8 text-romantic-500 fill-romantic-500 animate-pulse" />
+                <div className="mt-8 flex justify-center">
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      filter: ["drop-shadow(0 0 0px #f84a7e)", "drop-shadow(0 0 10px #f84a7e)", "drop-shadow(0 0 0px #f84a7e)"]
+                    }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    <Heart className="w-10 h-10 text-romantic-500 fill-romantic-500" />
+                  </motion.div>
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
