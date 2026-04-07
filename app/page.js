@@ -63,6 +63,11 @@ export default function Home() {
     nota: ""
   })
 
+  const [timeTogether, setTimeTogether] = useState({
+    noOficial: { days: 0, hours: 0, minutes: 0, seconds: 0 },
+    oficial: { days: 0, hours: 0, minutes: 0, seconds: 0 }
+  })
+
   const fileInputRef = useRef(null)
   
   // Keys from env
@@ -141,6 +146,30 @@ export default function Home() {
     url.searchParams.delete("clave")
     window.history.replaceState({}, '', url)
   }
+
+  useEffect(() => {
+    const calculateTime = (startDate) => {
+      const start = new Date(startDate)
+      const now = new Date()
+      const diff = now - start
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+      const minutes = Math.floor((diff / (1000 * 60)) % 60)
+      const seconds = Math.floor((diff / 1000) % 60)
+      
+      return { days, hours, minutes, seconds }
+    }
+
+    const timer = setInterval(() => {
+      setTimeTogether({
+        noOficial: calculateTime('2024-12-15T00:00:00'),
+        oficial: calculateTime('2025-02-14T00:00:00')
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   async function obtenerImagenes() {
     try {
@@ -477,7 +506,6 @@ export default function Home() {
             </div>
           </section>
         )}
-
         {/* Welcome Section */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
@@ -485,20 +513,74 @@ export default function Home() {
           className="mb-12 text-center sm:text-left flex flex-col md:flex-row gap-8 items-center md:items-start"
         >
           <div className="flex-1">
-            <h2 className="text-4xl font-extrabold text-gray-800 flex items-center justify-center sm:justify-start gap-3 leading-tight">
-              Nuestra historia en fotos <Sparkles className="text-romantic-400 w-8 h-8" />
-            </h2>
-            <p className="text-gray-500 mt-3 text-lg">Guardando cada lugar, cada fecha y cada sentimiento.</p>
+            <motion.h2 
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-4xl sm:text-5xl font-extrabold text-gray-800 mb-4 tracking-tight"
+            >
+              Nuestra historia en fotos <Sparkles className="inline text-romantic-400 w-8 h-8" />
+            </motion.h2>
+            <p className="text-gray-500 text-lg mb-8 font-medium">
+              Guardando cada lugar, cada fecha y cada sentimiento. ✨
+            </p>
             
-            <div className="flex items-center gap-4 mt-6 justify-center sm:justify-start">
-              <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-2">
-                <span className="text-romantic-500 font-bold">{imagenes.length}</span>
-                <span className="text-gray-400 text-sm">Momentos</span>
+            <div className="flex flex-wrap gap-4 mb-10">
+              <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
+                <span className="text-2xl font-black text-romantic-500">{imagenes.length}</span>
+                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Momentos</span>
               </div>
-              <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-romantic-400" />
-                <span className="text-gray-400 text-sm">Para siempre</span>
+              <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
+                <Clock className="text-romantic-300 w-5 h-5" />
+                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest text-romantic-500">Para siempre</span>
               </div>
+            </div>
+
+            {/* Timers Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-white p-6 rounded-[32px] shadow-sm border border-romantic-100 relative overflow-hidden group hover:shadow-md transition-shadow"
+              >
+                <div className="absolute top-0 right-0 p-4 bg-romantic-50 text-romantic-300 rounded-bl-[32px]">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <p className="text-[10px] font-bold text-romantic-300 uppercase tracking-[0.2em] mb-4">Desde que todo empezó 💙</p>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-4xl font-black text-gray-800 tracking-tighter">{timeTogether.noOficial.days}</span>
+                  <span className="text-sm font-bold text-gray-400">días</span>
+                </div>
+                <div className="flex gap-4 text-xs font-bold text-romantic-400">
+                  <span>{String(timeTogether.noOficial.hours).padStart(2, '0')}h</span>
+                  <span>{String(timeTogether.noOficial.minutes).padStart(2, '0')}m</span>
+                  <span>{String(timeTogether.noOficial.seconds).padStart(2, '0')}s</span>
+                </div>
+                <p className="mt-4 text-[10px] text-gray-400 font-medium">15 de diciembre, 2024</p>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-romantic-500 p-6 rounded-[32px] shadow-lg shadow-romantic-100 relative overflow-hidden group hover:scale-[1.02] transition-transform"
+              >
+                <div className="absolute top-0 right-0 p-4 bg-white/10 text-white/50 rounded-bl-[32px]">
+                  <Heart className="w-5 h-5 fill-current" />
+                </div>
+                <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.2em] mb-4">Nuestro Sí Oficial 💍</p>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-4xl font-black text-white tracking-tighter">{timeTogether.oficial.days}</span>
+                  <span className="text-sm font-bold text-white/70">días</span>
+                </div>
+                <div className="flex gap-4 text-xs font-bold text-white/60">
+                  <span>{String(timeTogether.oficial.hours).padStart(2, '0')}h</span>
+                  <span>{String(timeTogether.oficial.minutes).padStart(2, '0')}m</span>
+                  <span>{String(timeTogether.oficial.seconds).padStart(2, '0')}s</span>
+                </div>
+                <p className="mt-4 text-[10px] text-white/50 font-medium">14 de febrero, 2025</p>
+              </motion.div>
             </div>
           </div>
 
