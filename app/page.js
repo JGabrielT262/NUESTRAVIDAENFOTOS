@@ -418,7 +418,7 @@ export default function Home() {
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 truncate w-full text-center px-1">
-                    {new Date(img.fecha).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
+                    {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                   </span>
                 </motion.div>
               ))}
@@ -468,7 +468,7 @@ export default function Home() {
               <div className="px-1">
                 <p className="text-romantic-600 text-xs font-bold mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(recuerdoDelDia.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
                 <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
               </div>
@@ -509,7 +509,7 @@ export default function Home() {
                   <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-sm flex items-center gap-2">
                     <Calendar className="w-3 h-3 text-romantic-500" />
                     <span className="text-[10px] font-bold text-gray-700">
-                      {new Date(img.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
 
@@ -701,7 +701,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-bold">Nuestra Historia</p>
                     <p className="text-[10px] opacity-70">
-                      {new Date(selectedStory.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(selectedStory.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
@@ -774,7 +774,7 @@ export default function Home() {
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
                       <p className="text-sm font-bold text-gray-800">
-                        {new Date(selectedImage.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </div>
                   </div>
