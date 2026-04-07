@@ -163,8 +163,8 @@ export default function Home() {
 
     const timer = setInterval(() => {
       setTimeTogether({
-        noOficial: calculateTime('2024-12-15T00:00:00'),
-        oficial: calculateTime('2025-02-14T00:00:00')
+        noOficial: calculateTime('2025-12-15T00:00:00'),
+        oficial: calculateTime('2026-02-14T00:00:00')
       })
     }, 1000)
 
@@ -557,7 +557,7 @@ export default function Home() {
                   <span>{String(timeTogether.noOficial.minutes).padStart(2, '0')}m</span>
                   <span>{String(timeTogether.noOficial.seconds).padStart(2, '0')}s</span>
                 </div>
-                <p className="mt-4 text-[10px] text-gray-400 font-medium">15 de diciembre, 2024</p>
+                <p className="mt-4 text-[10px] text-gray-400 font-medium">15 de diciembre, 2025</p>
               </motion.div>
 
               <motion.div 
@@ -579,7 +579,7 @@ export default function Home() {
                   <span>{String(timeTogether.oficial.minutes).padStart(2, '0')}m</span>
                   <span>{String(timeTogether.oficial.seconds).padStart(2, '0')}s</span>
                 </div>
-                <p className="mt-4 text-[10px] text-white/50 font-medium">14 de febrero, 2025</p>
+                <p className="mt-4 text-[10px] text-white/50 font-medium">14 de febrero, 2026</p>
               </motion.div>
             </div>
           </div>
