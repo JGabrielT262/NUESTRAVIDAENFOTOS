@@ -833,7 +833,7 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row"
+              className="relative max-w-lg w-full max-h-[95vh] bg-[#1a1a1a] sm:bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col"
             >
               <button 
                 onClick={() => setSelectedImage(null)}
@@ -842,46 +842,46 @@ export default function Home() {
                 <X className="w-6 h-6" />
               </button>
 
-              <div className="flex-1 bg-gray-100 flex items-center justify-center overflow-hidden">
+              <div className="flex-[2] bg-black flex items-center justify-center overflow-hidden">
                 <img src={selectedImage.url} className="max-w-full max-h-full object-contain" alt="Recuerdo" />
               </div>
 
-              <div className="w-full md:w-80 bg-white p-8 flex flex-col justify-between border-l border-romantic-50">
-                <div>
-                  <div className="flex items-center gap-2 text-romantic-500 mb-6">
-                    <div className="bg-romantic-50 p-2 rounded-xl">
-                      <Calendar className="w-5 h-5" />
+              <div className="w-full bg-white p-5 sm:p-8 flex flex-col border-t sm:border-t-0 sm:border-l border-romantic-50">
+                <div className="grid grid-cols-2 gap-3 mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 text-romantic-500">
+                    <div className="bg-romantic-50 p-1.5 rounded-lg">
+                      <Calendar className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
-                      <p className="text-sm font-bold text-gray-800">
-                        {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
+                      <p className="text-xs font-bold text-gray-800">
+                        {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     </div>
                   </div>
 
                   {selectedImage.ubicacion && (
-                    <div className="flex items-center gap-2 text-romantic-500 mb-6">
-                      <div className="bg-romantic-50 p-2 rounded-xl">
-                        <MapPin className="w-5 h-5" />
+                    <div className="flex items-center gap-2 text-romantic-500">
+                      <div className="bg-romantic-50 p-1.5 rounded-lg">
+                        <MapPin className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
-                        <p className="text-sm font-bold text-gray-800">{selectedImage.ubicacion}</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
+                        <p className="text-xs font-bold text-gray-800 truncate max-w-[120px]">{selectedImage.ubicacion}</p>
                       </div>
                     </div>
                   )}
+                </div>
 
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300 ml-1">Nota de amor</p>
-                    <div className="bg-romantic-50/50 p-4 rounded-2xl border border-romantic-100 italic text-gray-600 text-sm leading-relaxed relative">
-                      <MessageSquare className="absolute -top-2 -left-2 w-4 h-4 text-romantic-200" />
-                      "{selectedImage.nota || "Un momento inolvidable juntos..."}"
-                    </div>
+                <div className="space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300 ml-1">Nota de amor</p>
+                  <div className="bg-romantic-50/50 p-3 rounded-xl border border-romantic-100 italic text-gray-600 text-[11px] leading-relaxed relative">
+                    <MessageSquare className="absolute -top-1.5 -left-1.5 w-3 h-3 text-romantic-200" />
+                    "{selectedImage.nota || "Un momento inolvidable juntos..."}"
                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col items-center gap-4">
+                <div className="mt-6 flex flex-col items-center gap-4">
                   {isAdmin && (
                     <button
                       onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
