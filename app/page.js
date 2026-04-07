@@ -22,7 +22,10 @@ import {
   LogOut,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  Pencil,
+  Save,
+  CheckCircle2
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
@@ -39,6 +42,9 @@ export default function Home() {
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ fecha: '', ubicacion: '', nota: '' })
+  const [updating, setUpdating] = useState(false)
   
   // Sort stories chronological (oldest to newest)
   const historiasOrdenadas = [...imagenes].slice(0, 15).reverse()
@@ -79,6 +85,17 @@ export default function Home() {
       }
     }
   }, [SECRET_KEY, ADMIN_KEY])
+
+  useEffect(() => {
+    if (selectedImage) {
+      setEditForm({ 
+        fecha: selectedImage.fecha, 
+        ubicacion: selectedImage.ubicacion || "", 
+        nota: selectedImage.nota || "" 
+      })
+      setIsEditing(false)
+    }
+  }, [selectedImage])
 
   useEffect(() => {
     if (imagenes.length > 0 && !recuerdoDelDia) {
@@ -198,6 +215,38 @@ export default function Home() {
       alert("Error al subir: " + err.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function actualizarImagen() {
+    if (!isAdmin || !selectedImage) return
+    setUpdating(true)
+    try {
+      const { error } = await supabase
+        .from("fotos")
+        .update({ 
+          fecha: editForm.fecha,
+          ubicacion: editForm.ubicacion,
+          nota: editForm.nota
+        })
+        .eq('id', selectedImage.id)
+
+      if (error) throw error
+
+      setImagenes(imagenes.map(img => img.id === selectedImage.id ? { ...img, ...editForm } : img))
+      setSelectedImage({ ...selectedImage, ...editForm })
+      setIsEditing(false)
+      
+      confetti({
+        particleCount: 50,
+        spread: 30,
+        origin: { y: 0.9 },
+        colors: ['#ff7da3', '#f84a7e']
+      })
+    } catch (err) {
+      alert("Error al actualizar: " + err.message)
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -849,75 +898,151 @@ export default function Home() {
 
                 {/* Info Section */}
                 <div className="p-6 sm:p-8 flex flex-col border-t border-romantic-50 bg-white">
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="flex items-center gap-3 text-romantic-500">
-                      <div className="bg-romantic-50 p-2 rounded-xl">
-                        <Calendar className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
-                        <p className="text-sm font-bold text-gray-800">
-                          {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedImage.ubicacion && (
-                      <div className="flex items-center gap-3 text-romantic-500">
-                        <div className="bg-romantic-50 p-2 rounded-xl">
-                          <MapPin className="w-5 h-5" />
+                  {!isEditing ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="flex items-center gap-3 text-romantic-500">
+                          <div className="bg-romantic-50 p-2 rounded-xl">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
+                            <p className="text-sm font-bold text-gray-800">
+                              {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
-                          <p className="text-sm font-bold text-gray-800 truncate">{selectedImage.ubicacion}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
-                  <div className="mb-8">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300 mb-3 ml-1">Nota de Amor</p>
-                    <div className="bg-romantic-50/50 p-5 rounded-2xl border border-romantic-100 italic relative">
-                      <MessageSquare className="absolute -top-2 -left-2 w-5 h-5 text-romantic-200" />
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        "{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}"
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-6">
-                    {isAdmin && (
-                      <button
-                        onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
-                        disabled={deletingId === selectedImage.id}
-                        className="w-full py-4 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                      >
-                        {deletingId === selectedImage.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
+                        {selectedImage.ubicacion && (
+                          <div className="flex items-center gap-3 text-romantic-500">
+                            <div className="bg-romantic-50 p-2 rounded-xl">
+                              <MapPin className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
+                              <p className="text-sm font-bold text-gray-800 truncate">{selectedImage.ubicacion}</p>
+                            </div>
+                          </div>
                         )}
-                        Eliminar este Recuerdo
-                      </button>
+                      </div>
+
+                      <div className="mb-8">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300 mb-3 ml-1">Nota de Amor</p>
+                        <div className="bg-romantic-50/50 p-5 rounded-2xl border border-romantic-100 italic relative">
+                          <MessageSquare className="absolute -top-2 -left-2 w-5 h-5 text-romantic-200" />
+                          <p className="text-gray-600 text-sm leading-relaxed">
+                            "{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}"
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-6 mb-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase text-romantic-400 ml-1">Fecha del Recuerdo</label>
+                          <input 
+                            type="date"
+                            value={editForm.fecha}
+                            onChange={(e) => setEditForm({...editForm, fecha: e.target.value})}
+                            className="w-full bg-romantic-50/50 border border-romantic-100 rounded-xl p-3 text-sm focus:outline-none focus:border-romantic-300"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase text-romantic-400 ml-1">¿Dónde fue?</label>
+                          <input 
+                            type="text"
+                            value={editForm.ubicacion}
+                            placeholder="Ej: Nuestra primera cita"
+                            onChange={(e) => setEditForm({...editForm, ubicacion: e.target.value})}
+                            className="w-full bg-romantic-50/50 border border-romantic-100 rounded-xl p-3 text-sm focus:outline-none focus:border-romantic-300"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase text-romantic-400 ml-1">Nota de amor (Corrige los errores aquí ❤️)</label>
+                        <textarea 
+                          rows="4"
+                          value={editForm.nota}
+                          onChange={(e) => setEditForm({...editForm, nota: e.target.value})}
+                          className="w-full bg-romantic-50/50 border border-romantic-100 rounded-2xl p-4 text-sm focus:outline-none focus:border-romantic-300 resize-none italic"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col items-center gap-4">
+                    {isAdmin && (
+                      <div className="grid grid-cols-2 gap-3 w-full">
+                        {!isEditing ? (
+                          <>
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="py-4 rounded-2xl bg-romantic-50 text-romantic-500 text-xs font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Pencil className="w-4 h-4" />
+                              Editar Texto
+                            </button>
+                            <button
+                              onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
+                              disabled={deletingId === selectedImage.id}
+                              className="py-4 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                            >
+                              {deletingId === selectedImage.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                              Eliminar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={actualizarImagen}
+                              disabled={updating}
+                              className="py-4 rounded-2xl bg-romantic-500 text-white text-xs font-bold hover:bg-romantic-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-romantic-100"
+                            >
+                              {updating ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                              Guardar cambios
+                            </button>
+                            <button
+                              onClick={() => setIsEditing(false)}
+                              disabled={updating}
+                              className="py-4 rounded-2xl bg-gray-100 text-gray-500 text-xs font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     )}
 
-                    <div className="flex items-center gap-3">
-                      <Heart className="w-8 h-8 text-romantic-500 fill-romantic-500 animate-pulse" />
-                      <span className="text-romantic-600 font-bold text-lg tracking-tight">Para siempre</span>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = selectedImage.url;
-                        link.download = `recuerdo-${selectedImage.fecha}.jpg`;
-                        link.click();
-                      }}
-                      className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-romantic-50 hover:text-romantic-500 transition-all flex items-center justify-center gap-2 border border-gray-100"
-                    >
-                      <Download className="w-5 h-5" />
-                      Descargar recuerdo completo
-                    </button>
+                    {!isEditing && (
+                      <>
+                        <div className="flex items-center gap-3 my-2">
+                          <Heart className="w-8 h-8 text-romantic-500 fill-romantic-500 animate-pulse" />
+                          <span className="text-romantic-600 font-bold text-lg tracking-tight">Para siempre</span>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = selectedImage.url;
+                            link.download = `recuerdo-${selectedImage.fecha}.jpg`;
+                            link.click();
+                          }}
+                          className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-romantic-50 hover:text-romantic-500 transition-all flex items-center justify-center gap-2 border border-gray-100"
+                        >
+                          <Download className="w-5 h-5" />
+                          Descargar foto original
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
