@@ -833,87 +833,92 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-lg w-full max-h-[95vh] bg-[#1a1a1a] sm:bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+              className="relative max-w-lg w-full max-h-[95vh] bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col"
             >
               <button 
                 onClick={() => setSelectedImage(null)}
-                className="absolute top-4 right-4 z-10 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-md transition-colors"
+                className="absolute top-4 right-4 z-[80] bg-black/40 hover:bg-black/60 text-white p-2.5 rounded-full backdrop-blur-md transition-all shadow-lg active:scale-90"
               >
                 <X className="w-6 h-6" />
               </button>
+              <div className="flex-1 overflow-y-auto pt-0 scrollbar-hide">
+                {/* Main Image - Full Width Scrollable Container */}
+                <div className="w-full bg-black flex items-center justify-center">
+                  <img src={selectedImage.url} className="w-full h-auto block" alt="Recuerdo" />
+                </div>
 
-              <div className="flex-[2] bg-black flex items-center justify-center overflow-hidden">
-                <img src={selectedImage.url} className="max-w-full max-h-full object-contain" alt="Recuerdo" />
-              </div>
-
-              <div className="w-full bg-white p-5 sm:p-8 flex flex-col border-t sm:border-t-0 sm:border-l border-romantic-50">
-                <div className="grid grid-cols-2 gap-3 mb-4 sm:mb-6">
-                  <div className="flex items-center gap-2 text-romantic-500">
-                    <div className="bg-romantic-50 p-1.5 rounded-lg">
-                      <Calendar className="w-4 h-4" />
+                {/* Info Section */}
+                <div className="p-6 sm:p-8 flex flex-col border-t border-romantic-50 bg-white">
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center gap-3 text-romantic-500">
+                      <div className="bg-romantic-50 p-2 rounded-xl">
+                        <Calendar className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
+                        <p className="text-sm font-bold text-gray-800">
+                          {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
-                      <p className="text-xs font-bold text-gray-800">
-                        {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+
+                    {selectedImage.ubicacion && (
+                      <div className="flex items-center gap-3 text-romantic-500">
+                        <div className="bg-romantic-50 p-2 rounded-xl">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
+                          <p className="text-sm font-bold text-gray-800 truncate">{selectedImage.ubicacion}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mb-8">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300 mb-3 ml-1">Nota de Amor</p>
+                    <div className="bg-romantic-50/50 p-5 rounded-2xl border border-romantic-100 italic relative">
+                      <MessageSquare className="absolute -top-2 -left-2 w-5 h-5 text-romantic-200" />
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        "{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}"
                       </p>
                     </div>
                   </div>
 
-                  {selectedImage.ubicacion && (
-                    <div className="flex items-center gap-2 text-romantic-500">
-                      <div className="bg-romantic-50 p-1.5 rounded-lg">
-                        <MapPin className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
-                        <p className="text-xs font-bold text-gray-800 truncate max-w-[120px]">{selectedImage.ubicacion}</p>
-                      </div>
+                  <div className="flex flex-col items-center gap-6">
+                    {isAdmin && (
+                      <button
+                        onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
+                        disabled={deletingId === selectedImage.id}
+                        className="w-full py-4 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                      >
+                        {deletingId === selectedImage.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        Eliminar este Recuerdo
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <Heart className="w-8 h-8 text-romantic-500 fill-romantic-500 animate-pulse" />
+                      <span className="text-romantic-600 font-bold text-lg tracking-tight">Para siempre</span>
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300 ml-1">Nota de amor</p>
-                  <div className="bg-romantic-50/50 p-3 rounded-xl border border-romantic-100 italic text-gray-600 text-[11px] leading-relaxed relative">
-                    <MessageSquare className="absolute -top-1.5 -left-1.5 w-3 h-3 text-romantic-200" />
-                    "{selectedImage.nota || "Un momento inolvidable juntos..."}"
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-col items-center gap-4">
-                  {isAdmin && (
+                    
                     <button
-                      onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
-                      disabled={deletingId === selectedImage.id}
-                      className="w-full py-3 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2 mb-2"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = selectedImage.url;
+                        link.download = `recuerdo-${selectedImage.fecha}.jpg`;
+                        link.click();
+                      }}
+                      className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-romantic-50 hover:text-romantic-500 transition-all flex items-center justify-center gap-2 border border-gray-100"
                     >
-                      {deletingId === selectedImage.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                      Eliminar Recuerdo
+                      <Download className="w-5 h-5" />
+                      Descargar recuerdo completo
                     </button>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <Heart className="w-6 h-6 text-romantic-500 fill-romantic-500 animate-pulse" />
-                    <span className="text-romantic-600 font-bold text-sm tracking-tighter">Para siempre</span>
                   </div>
-                  
-                  <button
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = selectedImage.url;
-                      link.download = `recuerdo-${selectedImage.fecha}.jpg`;
-                      link.click();
-                    }}
-                    className="w-full py-3 rounded-2xl bg-gray-50 text-gray-500 text-xs font-bold hover:bg-romantic-50 hover:text-romantic-500 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Descargar esta foto
-                  </button>
                 </div>
               </div>
             </motion.div>
