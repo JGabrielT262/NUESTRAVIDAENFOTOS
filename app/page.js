@@ -742,7 +742,7 @@ export default function Home() {
               initial={{ scale: 0.9, y: 100, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 100, opacity: 0 }}
-              className="relative w-full h-full max-w-lg bg-[#1a1a1a] flex flex-col overflow-hidden sm:rounded-3xl shadow-2xl"
+              className="relative w-full h-full max-w-lg bg-black overflow-hidden sm:rounded-3xl shadow-2xl"
             >
               {/* Progress Bars */}
               <div className="absolute top-4 left-4 right-4 flex gap-1.5 z-50">
@@ -813,51 +813,53 @@ export default function Home() {
                 />
               </div>
 
-              {/* Main Image */}
-              <div className="flex-1 flex items-center justify-center bg-black relative">
+              {/* Main Image Container */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
                 <AnimatePresence mode="wait">
                   <motion.img 
                     key={historiasOrdenadas[selectedStoryIndex].id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     src={historiasOrdenadas[selectedStoryIndex].url} 
-                    className="max-h-full w-auto object-contain" 
+                    className="max-h-full w-full object-contain" 
                     alt="Full Story" 
                   />
                 </AnimatePresence>
               </div>
 
-              {/* Footer Info */}
-              <div className="p-8 pb-12 bg-gradient-to-t from-black/95 via-black/60 to-transparent text-white z-50">
+              {/* Footer Info Overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-8 pb-14 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white z-50 pointer-events-none">
                 {historiasOrdenadas[selectedStoryIndex].ubicacion && (
                   <motion.div 
                     initial={{ y: 10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="flex items-center gap-2 mb-3 text-romantic-300 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md border border-white/5"
+                    className="flex justify-center mb-3"
                   >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span className="text-xs font-bold tracking-tight">{historiasOrdenadas[selectedStoryIndex].ubicacion}</span>
+                    <div className="flex items-center gap-1.5 text-romantic-300 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/5 text-[10px] font-bold uppercase tracking-widest shadow-lg">
+                      <MapPin className="w-3 h-3" />
+                      <span>{historiasOrdenadas[selectedStoryIndex].ubicacion}</span>
+                    </div>
                   </motion.div>
                 )}
                 {historiasOrdenadas[selectedStoryIndex].nota && (
                   <motion.p 
                     initial={{ y: 10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="text-lg italic font-medium leading-relaxed font-serif drop-shadow-lg"
+                    className="text-center text-base sm:text-lg italic font-medium leading-tight font-serif drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-4"
                   >
                     "{historiasOrdenadas[selectedStoryIndex].nota}"
                   </motion.p>
                 )}
-                <div className="mt-8 flex justify-center">
+                <div className="mt-6 flex justify-center">
                   <motion.div
                     animate={{ 
                       scale: [1, 1.2, 1],
                       filter: ["drop-shadow(0 0 0px #f84a7e)", "drop-shadow(0 0 10px #f84a7e)", "drop-shadow(0 0 0px #f84a7e)"]
                     }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    transition={{ repeat: Infinity, duration: 2 }}
                   >
-                    <Heart className="w-10 h-10 text-romantic-500 fill-romantic-500" />
+                    <Heart className="w-8 h-8 text-romantic-500 fill-romantic-500 opacity-80" />
                   </motion.div>
                 </div>
               </div>
