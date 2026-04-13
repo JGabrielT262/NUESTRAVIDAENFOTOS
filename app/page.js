@@ -45,9 +45,15 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({ fecha: '', ubicacion: '', nota: '' })
   const [updating, setUpdating] = useState(false)
+  const [vistas, setVistas] = useState([]) // Array of seen story IDs
   
-  // Sort stories chronological (oldest to newest)
-  const historiasOrdenadas = [...imagenes].slice(0, 15).reverse()
+  // Historias destacadas del día (cerca de la fecha actual de años anteriores)
+  const [historiasDelDia, setHistoriasDelDia] = useState([])
+  const [showDayStoriesModal, setShowDayStoriesModal] = useState(false)
+  const [currentDayStoryIdx, setCurrentDayStoryIdx] = useState(0)
+  
+  // Sort stories: NEWEST to OLDEST
+  const historiasOrdenadas = [...imagenes].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 15)
   
   // Auth states
   const [inputClave, setInputClave] = useState("")
@@ -77,6 +83,12 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true)
     
+    // Check for seen stories
+    const savedVistas = localStorage.getItem("historias_vistas")
+    if (savedVistas) {
+      setVistas(JSON.parse(savedVistas))
+    }
+
     // Check for existing session in localStorage
     const savedClave = localStorage.getItem("album_clave")
     if (savedClave) {
@@ -90,6 +102,47 @@ export default function Home() {
       }
     }
   }, [SECRET_KEY, ADMIN_KEY])
+
+  // Lógica para historias del día (cerca de la fecha actual de años anteriores)
+  useEffect(() => {
+    if (imagenes.length > 0) {
+      const hoy = new Date()
+      const diaActual = hoy.getDate()
+      const mesActual = hoy.getMonth()
+      
+      const destacadas = imagenes.filter(img => {
+        const fechaImg = new Date(img.fecha + "T00:00:00")
+        const diaImg = fechaImg.getDate()
+        const mesImg = fechaImg.getMonth()
+        const anioImg = fechaImg.getFullYear()
+        
+        // No mostrar historias de este año (solo pasadas)
+        if (anioImg === hoy.getFullYear()) return false
+        
+        // Historias cerca de la fecha (+- 3 días)
+        const diffDias = Math.abs(diaImg - diaActual)
+        return mesImg === mesActual && diffDias <= 3
+      })
+      
+      setHistoriasDelDia(destacadas)
+    }
+  }, [imagenes])
+
+  const marcarComoVista = (id) => {
+    if (!vistas.includes(id)) {
+      const nuevasVistas = [...vistas, id]
+      setVistas(nuevasVistas)
+      localStorage.setItem("historias_vistas", JSON.stringify(nuevasVistas))
+    }
+  }
+
+  const esNueva = (fechaSubida) => {
+    if (!fechaSubida) return false
+    const subida = new Date(fechaSubida)
+    const ahora = new Date()
+    const diffHours = (ahora - subida) / (1000 * 60 * 60)
+    return diffHours <= 48 // Considerar nueva si se subió hace menos de 48h
+  }
 
   useEffect(() => {
     if (selectedImage) {
@@ -179,9 +232,38 @@ export default function Home() {
         .order("fecha", { ascending: false })
 
       if (error) throw error
+      // Asegurarnos de que las fechas sean correctas y añadir created_at si existe para 'esNueva'
       setImagenes(data || [])
     } catch (err) {
       console.error("Error fetching images:", err)
+    }
+  }
+
+  const descargarCollage = async () => {
+    if (historiasDelDia.length === 0) return
+    const zip = new JSZip()
+    const folder = zip.folder("nuestro-dia-especial")
+    
+    try {
+      const downloadPromises = historiasDelDia.map(async (img, index) => {
+        const response = await fetch(img.url)
+        const blob = await response.blob()
+        const ext = img.url.split('.').pop().split('?')[0]
+        folder.file(`recuerdo-${img.fecha}-${index + 1}.${ext}`, blob)
+      })
+
+      await Promise.all(downloadPromises)
+      const content = await zip.generateAsync({ type: "blob" })
+      saveAs(content, "collage-nuestro-dia.zip")
+      
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.7 },
+        colors: ['#ff7da3', '#f84a7e', '#ffffff']
+      })
+    } catch (err) {
+      alert("Error al descargar el collage")
     }
   }
 
@@ -484,25 +566,45 @@ export default function Home() {
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Añadir</span>
               </div>
               
-              {historiasOrdenadas.map((img, i) => (
-                <motion.div 
-                  key={`story-${img.id}`}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex flex-col items-center gap-2 min-w-[80px] cursor-pointer"
-                  onClick={() => setSelectedStoryIndex(i)}
-                >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] bg-gradient-to-tr from-romantic-300 via-romantic-500 to-romantic-600 shadow-md text-[0px]">
-                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                      <img src={img.url} className="w-full h-full object-cover" alt="Story" />
+              {historiasOrdenadas.map((img, i) => {
+                const vista = vistas.includes(img.id)
+                const nueva = esNueva(img.created_at)
+                
+                return (
+                  <motion.div 
+                    key={`story-${img.id}`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="flex flex-col items-center gap-2 min-w-[80px] cursor-pointer group"
+                    onClick={() => {
+                      setSelectedStoryIndex(i)
+                      marcarComoVista(img.id)
+                    }}
+                  >
+                    <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] ${
+                      vista 
+                        ? 'bg-gray-200' 
+                        : 'bg-gradient-to-tr from-romantic-300 via-romantic-500 to-romantic-600'
+                    } shadow-md transition-all duration-300 group-hover:scale-105`}>
+                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
+                        <img src={img.url} className="w-full h-full object-cover" alt="Story" />
+                      </div>
+                      
+                      {nueva && !vista && (
+                        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white animate-pulse">
+                          NUEVA
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-500 truncate w-full text-center px-1">
-                    {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
-                  </span>
-                </motion.div>
-              ))}
+                    <span className={`text-[10px] font-bold truncate w-full text-center px-1 ${
+                      vista ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </motion.div>
+                )
+              })}
             </div>
           </section>
         )}
@@ -584,30 +686,63 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Recuerdo del día Card */}
-          {recuerdoDelDia && (
-            <motion.div 
-              initial={{ rotate: 2, scale: 0.9, opacity: 0 }}
-              animate={{ rotate: -2, scale: 1, opacity: 1 }}
-              whileHover={{ rotate: 0, scale: 1.05 }}
-              onClick={() => setSelectedImage(recuerdoDelDia)}
-              className="w-64 bg-white p-3 rounded-xl shadow-xl border-4 border-white transform transition-all cursor-pointer group"
-            >
-              <div className="aspect-square overflow-hidden rounded-lg mb-2 relative">
-                <img src={recuerdoDelDia.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
-                <div className="absolute top-2 right-2 bg-romantic-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
-                  Recuerdo del día
+          {/* Historias del día y Recuerdo del día */}
+          <div className="flex flex-col sm:flex-row gap-8 items-center justify-center md:items-start shrink-0">
+            {/* Historias del Día (Libros apilados) */}
+            {historiasDelDia.length > 0 && (
+              <motion.div 
+                initial={{ rotate: -5, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                className="relative w-64 h-80 flex flex-col items-center group cursor-pointer"
+                onClick={() => {
+                  setCurrentDayStoryIdx(0)
+                  setShowDayStoriesModal(true)
+                }}
+              >
+                <div className="absolute inset-0 bg-white rounded-2xl shadow-xl border border-romantic-100 transform translate-y-4 translate-x-4 rotate-6 group-hover:rotate-12 transition-transform duration-500"></div>
+                <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-romantic-100 transform translate-y-2 translate-x-2 rotate-3 group-hover:rotate-6 transition-transform duration-500"></div>
+                
+                <div className="relative w-full h-full bg-white rounded-2xl shadow-md border-4 border-white overflow-hidden flex flex-col group-hover:scale-105 transition-transform duration-500">
+                  <div className="flex-1 overflow-hidden relative">
+                    <img src={historiasDelDia[0].url} className="w-full h-full object-cover" alt="Recuerdos pasados" />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors"></div>
+                    <div className="absolute top-3 left-3 bg-romantic-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg">
+                      {historiasDelDia.length} recuerdos pasados
+                    </div>
+                  </div>
+                  <div className="p-4 bg-white text-center">
+                    <p className="text-romantic-600 font-black text-sm uppercase tracking-tighter">Recuerdos de un día como hoy</p>
+                    <p className="text-[10px] text-gray-400 font-medium">Pulsa para abrir el álbum</p>
+                  </div>
                 </div>
-              </div>
-              <div className="px-1">
-                <p className="text-romantic-600 text-xs font-bold mb-1 flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-                <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+
+            {/* Recuerdo del día Card */}
+            {recuerdoDelDia && (
+              <motion.div 
+                initial={{ rotate: 2, scale: 0.9, opacity: 0 }}
+                animate={{ rotate: -2, scale: 1, opacity: 1 }}
+                whileHover={{ rotate: 0, scale: 1.05 }}
+                onClick={() => setSelectedImage(recuerdoDelDia)}
+                className="w-64 bg-white p-3 rounded-xl shadow-xl border-4 border-white transform transition-all cursor-pointer group"
+              >
+                <div className="aspect-square overflow-hidden rounded-lg mb-2 relative">
+                  <img src={recuerdoDelDia.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
+                  <div className="absolute top-2 right-2 bg-romantic-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+                    Recuerdo del día
+                  </div>
+                </div>
+                <div className="px-1 text-center">
+                  <p className="text-romantic-600 text-xs font-bold mb-1 flex items-center justify-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </motion.div>
 
         {/* Timeline Header */}
@@ -698,6 +833,122 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Day Stories Modal (Presentación) */}
+      <AnimatePresence>
+        {showDayStoriesModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 sm:p-10">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0"
+              onClick={() => setShowDayStoriesModal(false)}
+            />
+
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-4xl h-full max-h-[80vh] flex flex-col items-center justify-center z-10"
+            >
+              {currentDayStoryIdx < historiasDelDia.length ? (
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  <div className="absolute top-0 left-0 right-0 flex gap-2 p-4 z-20">
+                    {historiasDelDia.map((_, idx) => (
+                      <div key={`day-bar-${idx}`} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ 
+                            width: idx === currentDayStoryIdx ? "100%" : idx < currentDayStoryIdx ? "100%" : "0%" 
+                          }}
+                          transition={{ duration: idx === currentDayStoryIdx ? 4 : 0, ease: "linear" }}
+                          onAnimationComplete={() => {
+                            if (idx === currentDayStoryIdx) {
+                              setCurrentDayStoryIdx(prev => prev + 1)
+                            }
+                          }}
+                          className="h-full bg-romantic-400"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={historiasDelDia[currentDayStoryIdx].id}
+                      initial={{ opacity: 0, x: 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -50 }}
+                      className="w-full h-full flex flex-col items-center justify-center"
+                    >
+                      <div className="relative max-h-[70%] w-full flex justify-center">
+                        <img 
+                          src={historiasDelDia[currentDayStoryIdx].url} 
+                          className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl border-4 border-white/10" 
+                          alt="Story" 
+                        />
+                      </div>
+                      <div className="mt-8 text-center text-white px-6">
+                        <p className="text-romantic-300 font-black text-xl mb-2">
+                          {new Date(historiasDelDia[currentDayStoryIdx].fecha + "T00:00:00").getFullYear()}
+                        </p>
+                        <p className="text-lg italic font-medium max-w-2xl">
+                          "{historiasDelDia[currentDayStoryIdx].nota || "Un momento inolvidable"}"
+                        </p>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-white rounded-[40px] p-10 flex flex-col items-center text-center max-w-md shadow-2xl"
+                >
+                  <div className="w-24 h-24 bg-romantic-100 rounded-full flex items-center justify-center mb-6">
+                    <Sparkles className="text-romantic-500 w-12 h-12" />
+                  </div>
+                  <h3 className="text-3xl font-black text-gray-800 mb-4">¡Qué lindo es recordar!</h3>
+                  <p className="text-gray-500 mb-8 font-medium">Hemos revivido {historiasDelDia.length} momentos de este día en años anteriores. ❤️</p>
+                  
+                  {/* Collage Preview (Simple representation) */}
+                  <div className="grid grid-cols-3 gap-2 mb-8 w-full aspect-video overflow-hidden rounded-2xl border-2 border-romantic-50 p-2">
+                    {historiasDelDia.slice(0, 6).map((img, i) => (
+                      <div key={`mini-${i}`} className="w-full h-full bg-gray-100 rounded-lg overflow-hidden">
+                        <img src={img.url} className="w-full h-full object-cover" alt="mini" />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col w-full gap-3">
+                    <button 
+                      onClick={descargarCollage}
+                      className="w-full bg-romantic-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-romantic-200 hover:bg-romantic-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span>Descargar este collage</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowDayStoriesModal(false)}
+                      className="w-full bg-gray-100 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                    >
+                      Cerrar álbum del día
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              <button 
+                onClick={() => setShowDayStoriesModal(false)}
+                className="absolute -top-12 right-0 sm:-right-12 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Upload Modal */}
       <AnimatePresence>

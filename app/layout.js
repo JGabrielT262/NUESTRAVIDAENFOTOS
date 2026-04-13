@@ -3,11 +3,14 @@ import { Inter } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const viewport = {
+  themeColor: '#f84a7e',
+}
+
 export const metadata = {
   title: 'Nuestra Vida Juntos ❤️',
   description: 'Un lugar especial para nuestros recuerdos',
   manifest: '/manifest.json',
-  themeColor: '#f84a7e',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
