@@ -695,8 +695,8 @@ export default function Home() {
             animate={{ x: 0, opacity: 1 }}
             className="flex items-center gap-2"
           >
-            <div className="bg-romantic-100 p-1 rounded-xl w-10 h-10 overflow-hidden shadow-inner">
-               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            <div className="w-11 h-11 rounded-full overflow-hidden shadow-lg border-2 border-white flex items-center justify-center bg-white">
+               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
             </div>
             <h1 className="text-xl font-black text-gray-800 hidden sm:block tracking-tighter">Nuestra Vida Juntos</h1>
             {isAdmin && (
@@ -1291,11 +1291,11 @@ export default function Home() {
 
                   {!isVideo(selectedFiles[0]?.name) && (
                     <div className="pt-2">
-                       <input 
-                         type="file" 
-                         accept="audio/*" 
-                         className="hidden" 
-                         ref={musicInputRef}
+                        <input 
+                          type="file" 
+                          accept="audio/*, .mp3, .wav, .m4a, .aac, .ogg" 
+                          className="hidden" 
+                          ref={musicInputRef}
                          onChange={(e) => {
                            if (e.target.files[0]) {
                              setSelectedAudioFile(e.target.files[0])
@@ -1638,7 +1638,7 @@ export default function Home() {
                       <div className="pt-2">
                         <input 
                           type="file" 
-                          accept="audio/*" 
+                          accept="audio/*, .mp3, .wav, .m4a, .aac, .ogg" 
                           className="hidden" 
                           ref={musicInputRef}
                           onChange={(e) => {
