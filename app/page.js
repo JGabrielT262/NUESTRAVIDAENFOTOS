@@ -31,7 +31,11 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Share2
+  Share2,
+  BookHeart,
+  PenLine,
+  MessageCircleHeart,
+  History
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
@@ -68,8 +72,13 @@ export default function Home() {
   const [trimmingFile, setTrimmingFile] = useState(null)
   const [trimData, setTrimData] = useState(null) // { startTime, endTime }
   const [selectedAudioFile, setSelectedAudioFile] = useState(null)
-  const [audioTrimData, setAudioTrimData] = useState(null) // { startTime }
+  const [audioTrimData, setAudioTrimData] = useState(null)
   const [showMusicModal, setShowMusicModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('album') // 'album' o 'diario'
+  const [diario, setDiario] = useState([])
+  const [showDiarioModal, setShowDiarioModal] = useState(false)
+  const [notaData, setNotaData] = useState({ autor: '', contenido: '' })
+  const [enviandoNota, setEnviandoNota] = useState(false)
   
   const audioRef = useRef(null)
   const musicInputRef = useRef(null)
@@ -79,8 +88,14 @@ export default function Home() {
   const [showDayStoriesModal, setShowDayStoriesModal] = useState(false)
   const [currentDayStoryIdx, setCurrentDayStoryIdx] = useState(0)
   
-  // Sort stories: NEWEST to OLDEST
-  const historiasOrdenadas = [...imagenes].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 15)
+  // Sort stories: NEW UNSEEN FIRST, then chronologically
+  const historiasOrdenadas = [...imagenes].sort((a, b) => {
+    const aVista = vistas.includes(a.id)
+    const bVista = vistas.includes(b.id)
+    if (!aVista && bVista) return -1
+    if (aVista && !bVista) return 1
+    return new Date(b.fecha) - new Date(a.fecha)
+  }).slice(0, 15)
   
   // Auth states
   const [inputClave, setInputClave] = useState("")
@@ -177,6 +192,56 @@ export default function Home() {
     const diffHours = (ahora - subida) / (1000 * 60 * 60)
     return diffHours <= 48 // Considerar nueva si se subió hace menos de 48h
   }
+
+  async function obtenerDiario() {
+    try {
+      const { data, error } = await supabase
+        .from('diario')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setDiario(data || [])
+    } catch (err) {
+      console.error("Error cargando diario:", err)
+    }
+  }
+
+  async function enviarNota(e) {
+    if (e) e.preventDefault()
+    if (!notaData.autor || !notaData.contenido) return
+    
+    setEnviandoNota(true)
+    try {
+      const { error } = await supabase
+        .from('diario')
+        .insert([notaData])
+      
+      if (error) throw error
+      
+      setNotaData({ autor: '', contenido: '' })
+      setShowDiarioModal(false)
+      obtenerDiario()
+      
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.8 },
+        colors: ['#f84a7e', '#ffb6c1']
+      })
+    } catch (err) {
+      alert("Error al guardar en el diario: " + err.message)
+    } finally {
+      setEnviandoNota(false)
+    }
+  }
+
+  useEffect(() => {
+    if (authorized) {
+      obtenerImagenes()
+      obtenerDiario()
+    }
+  }, [authorized])
 
   useEffect(() => {
     if (selectedImage) {
@@ -836,6 +901,38 @@ export default function Home() {
           animate={{ y: 0, opacity: 1 }}
           className="bg-white p-10 rounded-[40px] shadow-2xl max-w-md w-full border border-romantic-100 relative overflow-hidden"
         >
+          {/* Tabs romantic switcher */}
+        <div className="flex justify-center mb-12">
+          <div className="bg-white/50 backdrop-blur-md p-2 rounded-[30px] shadow-xl border border-white/40 flex gap-2">
+            <button
+              onClick={() => setActiveTab('album')}
+              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                activeTab === 'album' 
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
+                  : 'text-gray-400 hover:text-romantic-400'
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              NUESTRO ÁLBUM
+            </button>
+            <button
+              onClick={() => setActiveTab('diario')}
+              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                activeTab === 'diario' 
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
+                  : 'text-gray-400 hover:text-romantic-400'
+              }`}
+            >
+              <BookHeart className="w-4 h-4" />
+              DIARIO DE AMOR
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'album' ? (
+          <>
+            {/* Historias Estilo Instagram */}
+            <div className="mb-12 relative">
           {/* Decorative hearts */}
           <div className="absolute -top-6 -right-6 text-romantic-100 rotate-12">
             <Heart className="w-24 h-24 fill-current" />
@@ -957,228 +1054,412 @@ export default function Home() {
       </header>
 
       <main className="max-w-[1600px] mx-auto px-6 xl:px-12 pt-8">
-        {/* Stories Section - Instagram Style */}
-        {imagenes.length > 0 && (
-          <section className="mb-12 overflow-x-auto pb-6 no-scrollbar">
-            <div className="flex gap-6 items-start">
-              <div className="flex flex-col items-center gap-2 min-w-[80px]">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-romantic-300 flex items-center justify-center bg-white shadow-sm hover:bg-romantic-50 transition-colors"
+        {/* Tabs romantic switcher */}
+        <div className="flex justify-center mb-12">
+          <div className="bg-white/50 backdrop-blur-md p-2 rounded-[30px] shadow-xl border border-white/40 flex gap-2">
+            <button
+              onClick={() => setActiveTab('album')}
+              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                activeTab === 'album' 
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
+                  : 'text-gray-400 hover:text-romantic-400'
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              NUESTRO ÁLBUM
+            </button>
+            <button
+              onClick={() => setActiveTab('diario')}
+              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                activeTab === 'diario' 
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
+                  : 'text-gray-400 hover:text-romantic-400'
+              }`}
+            >
+              <BookHeart className="w-4 h-4" />
+              DIARIO DE AMOR
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'album' ? (
+          <>
+            {/* Stories Section - Instagram Style */}
+            {imagenes.length > 0 && (
+              <section className="mb-12 overflow-x-auto pb-6 no-scrollbar">
+                <div className="flex gap-6 items-start">
+                  <div className="flex flex-col items-center gap-2 min-w-[80px]">
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-romantic-300 flex items-center justify-center bg-white shadow-sm hover:bg-romantic-50 transition-colors"
+                    >
+                      <Plus className="text-romantic-400 w-8 h-8" />
+                    </motion.button>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Añadir</span>
+                  </div>
+                  
+                  {historiasOrdenadas.map((img, i) => {
+                    const vista = vistas.includes(img.id)
+                    const nueva = esNueva(img.created_at)
+                    
+                    return (
+                      <motion.div 
+                        key={`story-${img.id}`}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="flex flex-col items-center gap-2 min-w-[80px] cursor-pointer group"
+                        onClick={() => {
+                          setSelectedStoryIndex(i)
+                          marcarComoVista(img.id)
+                        }}
+                      >
+                        <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] ${
+                          vista 
+                            ? 'bg-gray-200' 
+                            : 'bg-gradient-to-tr from-romantic-300 via-romantic-500 to-romantic-600'
+                        } shadow-md transition-all duration-300 group-hover:scale-105`}>
+                          <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {isVideo(img.url) ? (
+                              <div className="w-full h-full relative">
+                                <video src={img.url} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                  <Play className="text-white w-6 h-6 fill-white" />
+                                </div>
+                              </div>
+                            ) : (
+                              <img src={img.url} className="w-full h-full object-cover" alt="Story" />
+                            )}
+                          </div>
+                          
+                          {nueva && !vista && (
+                            <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white animate-pulse">
+                              NUEVA
+                            </div>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold truncate w-full text-center px-1 ${
+                          vista ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+            {/* Welcome Section */}
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="mb-12 text-center sm:text-left flex flex-col md:flex-row gap-8 xl:gap-20 items-center md:items-start"
+            >
+              <div className="flex-1">
+                <motion.h2 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  className="text-4xl sm:text-5xl 2xl:text-7xl font-extrabold text-gray-800 mb-4 tracking-tight"
                 >
-                  <Plus className="text-romantic-400 w-8 h-8" />
-                </motion.button>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Añadir</span>
-              </div>
-              
-              {historiasOrdenadas.map((img, i) => {
-                const vista = vistas.includes(img.id)
-                const nueva = esNueva(img.created_at)
+                  Nuestra historia en fotos <Sparkles className="inline text-romantic-400 w-8 h-8 2xl:w-12 2xl:h-12" />
+                </motion.h2>
+                <p className="text-gray-500 text-lg 2xl:text-2xl mb-8 font-medium">
+                  Guardando cada lugar, cada fecha y cada sentimiento. ✨
+                </p>
                 
-                return (
+                <div className="flex flex-wrap gap-4 mb-10">
+                  <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
+                    <span className="text-2xl font-black text-romantic-500">{imagenes.length}</span>
+                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Momentos</span>
+                  </div>
+                  <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
+                    <Clock className="text-romantic-300 w-5 h-5" />
+                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest text-romantic-500">Para siempre</span>
+                  </div>
+                </div>
+
+                {/* Timers Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                   <motion.div 
-                    key={`story-${img.id}`}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="flex flex-col items-center gap-2 min-w-[80px] cursor-pointer group"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-white p-6 rounded-[32px] shadow-sm border border-romantic-100 relative overflow-hidden group hover:shadow-md transition-shadow"
+                  >
+                    <div className="absolute top-0 right-0 p-4 bg-romantic-50 text-romantic-300 rounded-bl-[32px]">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <p className="text-[10px] font-bold text-romantic-300 uppercase tracking-[0.2em] mb-4">Desde que todo empezó 💙</p>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-4xl font-black text-gray-800 tracking-tighter">{timeTogether.noOficial.days}</span>
+                      <span className="text-sm font-bold text-gray-400">días</span>
+                    </div>
+                    <div className="flex gap-4 text-xs font-bold text-romantic-400">
+                      <span>{String(timeTogether.noOficial.hours).padStart(2, '0')}h</span>
+                      <span>{String(timeTogether.noOficial.minutes).padStart(2, '0')}m</span>
+                      <span>{String(timeTogether.noOficial.seconds).padStart(2, '0')}s</span>
+                    </div>
+                    <p className="mt-4 text-[10px] text-gray-400 font-medium">15 de diciembre, 2025</p>
+                  </motion.div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-romantic-500 p-6 rounded-[32px] shadow-lg shadow-romantic-100 relative overflow-hidden group hover:scale-[1.02] transition-transform"
+                  >
+                    <div className="absolute top-0 right-0 p-4 bg-white/10 text-white/50 rounded-bl-[32px]">
+                      <Heart className="w-5 h-5 fill-current" />
+                    </div>
+                    <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.2em] mb-4">Nuestro Sí Oficial 💍</p>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-4xl font-black text-white tracking-tighter">{timeTogether.oficial.days}</span>
+                      <span className="text-sm font-bold text-white/70">días</span>
+                    </div>
+                    <div className="flex gap-4 text-xs font-bold text-white/60">
+                      <span>{String(timeTogether.oficial.hours).padStart(2, '0')}h</span>
+                      <span>{String(timeTogether.oficial.minutes).padStart(2, '0')}m</span>
+                      <span>{String(timeTogether.oficial.seconds).padStart(2, '0')}s</span>
+                    </div>
+                    <p className="mt-4 text-[10px] text-white/50 font-medium">14 de febrero, 2026</p>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Historias del día y Recuerdo del día */}
+              <div className="flex flex-col sm:flex-row gap-8 items-center justify-center md:items-start shrink-0">
+                {/* Historias del Día (Libros apilados) */}
+                {historiasDelDia.length > 0 && (
+                  <motion.div 
+                    initial={{ rotate: -5, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    className="relative w-64 h-80 flex flex-col items-center group cursor-pointer"
                     onClick={() => {
-                      setSelectedStoryIndex(i)
-                      marcarComoVista(img.id)
+                      setCurrentDayStoryIdx(0)
+                      setShowDayStoriesModal(true)
                     }}
                   >
-                    <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] ${
-                      vista 
-                        ? 'bg-gray-200' 
-                        : 'bg-gradient-to-tr from-romantic-300 via-romantic-500 to-romantic-600'
-                    } shadow-md transition-all duration-300 group-hover:scale-105`}>
-                      <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
-                        {isVideo(img.url) ? (
-                          <div className="w-full h-full relative">
-                            <video src={img.url} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                              <Play className="text-white w-6 h-6 fill-white" />
+                    <div className="absolute inset-0 bg-white rounded-2xl shadow-xl border border-romantic-100 transform translate-y-4 translate-x-4 rotate-6 group-hover:rotate-12 transition-transform duration-500"></div>
+                    <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-romantic-100 transform translate-y-2 translate-x-2 rotate-3 group-hover:rotate-6 transition-transform duration-500"></div>
+                    
+                    <div className="relative w-full h-full bg-white rounded-2xl shadow-md border-4 border-white overflow-hidden flex flex-col group-hover:scale-105 transition-transform duration-500">
+                      <div className="flex-1 overflow-hidden relative">
+                        {isVideo(historiasDelDia[0].url) ? (
+                          <video src={historiasDelDia[0].url} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={historiasDelDia[0].url} className="w-full h-full object-cover" alt="Recuerdos pasados" />
+                        )}
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center">
+                          {isVideo(historiasDelDia[0].url) && <Play className="text-white w-10 h-10 fill-white" />}
+                        </div>
+                        <div className="absolute top-3 left-3 bg-romantic-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg">
+                          {historiasDelDia.length} recuerdos pasados
+                        </div>
+                      </div>
+                      <div className="p-4 bg-white text-center">
+                        <p className="text-romantic-600 font-black text-sm uppercase tracking-tighter">Recuerdos de un día como hoy</p>
+                        <p className="text-[10px] text-gray-400 font-medium">Pulsa para abrir el álbum</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Recuerdo del día Card */}
+                {recuerdoDelDia && (
+                  <motion.div 
+                    initial={{ rotate: 2, scale: 0.9, opacity: 0 }}
+                    animate={{ rotate: -2, scale: 1, opacity: 1 }}
+                    whileHover={{ rotate: 0, scale: 1.05 }}
+                    onClick={() => setSelectedImage(recuerdoDelDia)}
+                    className="w-64 bg-white p-3 rounded-xl shadow-xl border-4 border-white transform transition-all cursor-pointer group"
+                  >
+                    <div className="aspect-square overflow-hidden rounded-lg mb-2 relative flex items-center justify-center bg-gray-100">
+                      {isVideo(recuerdoDelDia.url) ? (
+                        <div className="w-full h-full relative">
+                          <video src={recuerdoDelDia.url} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors">
+                            <Play className="text-white w-10 h-10 fill-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img src={recuerdoDelDia.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
+                      )}
+                      <div className="absolute top-2 right-2 bg-romantic-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+                        Recuerdo del día
+                      </div>
+                    </div>
+                    <div className="px-1 text-center">
+                      <p className="text-romantic-600 text-xs font-bold mb-1 flex items-center justify-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                      <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Timeline Header */}
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-[1px] flex-1 bg-romantic-200"></div>
+              <span className="text-romantic-400 font-bold text-sm tracking-widest uppercase">Nuestra Línea de Tiempo</span>
+              <div className="h-[1px] flex-1 bg-romantic-200"></div>
+            </div>
+
+            {/* Gallery Grid */}
+            <div className="gallery-grid">
+              <AnimatePresence>
+                {imagenes.map((img, index) => (
+                  <motion.div
+                    key={img.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                    className="gallery-item group relative overflow-hidden rounded-3xl bg-white shadow-sm hover:shadow-2xl transition-all duration-500"
+                  >
+                    <div 
+                      className="relative cursor-pointer min-h-[200px] flex items-center justify-center bg-gray-50"
+                      onClick={() => setSelectedImage(img)}
+                    >
+                      {isVideo(img.url) ? (
+                        <div className="w-full relative">
+                          <video src={img.url} className="w-full h-auto object-cover rounded-t-3xl" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-all">
+                            <div className="bg-white/90 p-4 rounded-full shadow-xl transform transition-transform group-hover:scale-110">
+                              <Play className="text-romantic-500 w-8 h-8 fill-romantic-500" />
                             </div>
                           </div>
-                        ) : (
-                          <img src={img.url} className="w-full h-full object-cover" alt="Story" />
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <img 
+                          src={img.url} 
+                          className="w-full h-auto object-cover rounded-t-3xl transition-transform duration-500 group-hover:scale-105" 
+                          alt="Recuerdo"
+                          loading="lazy"
+                        />
+                      )}
                       
-                      {nueva && !vista && (
-                        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white animate-pulse">
-                          NUEVA
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-sm flex items-center gap-2">
+                        <Calendar className="w-3 h-3 text-romantic-500" />
+                        <span className="text-[10px] font-bold text-gray-700">
+                          {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+
+                      {img.metadata?.audio && (
+                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
+                          <Music className="w-3.5 h-3.5 text-romantic-500 animate-bounce" />
+                        </div>
+                      )}
+
+                      {isAdmin && (
+                        <div className="absolute top-4 right-4 flex gap-2">
+                           <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedImage(img);
+                              setIsEditing(true);
+                              setEditForm({ fecha: img.fecha, ubicacion: img.ubicacion, nota: img.nota });
+                            }}
+                            className="bg-white/90 hover:bg-romantic-50 text-romantic-500 p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                            title="Editar Recuerdo"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                         </div>
                       )}
                     </div>
-                    <span className={`text-[10px] font-bold truncate w-full text-center px-1 ${
-                      vista ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
-                    </span>
+
+                    <div className="p-4 bg-white">
+                      {img.ubicacion && (
+                        <div className="flex items-center gap-1.5 text-romantic-500 mb-2">
+                          <MapPin className="w-3 h-3" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">{img.ubicacion}</span>
+                        </div>
+                      )}
+                      <p className="text-gray-600 text-sm line-clamp-2">{img.nota}</p>
+                    </div>
                   </motion.div>
-                )
-              })}
+                ))}
+              </AnimatePresence>
             </div>
-          </section>
-        )}
-        {/* Welcome Section */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="mb-12 text-center sm:text-left flex flex-col md:flex-row gap-8 xl:gap-20 items-center md:items-start"
-        >
-          <div className="flex-1">
-            <motion.h2 
-              initial={{ y: 20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-4xl sm:text-5xl 2xl:text-7xl font-extrabold text-gray-800 mb-4 tracking-tight"
-            >
-              Nuestra historia en fotos <Sparkles className="inline text-romantic-400 w-8 h-8 2xl:w-12 2xl:h-12" />
-            </motion.h2>
-            <p className="text-gray-500 text-lg 2xl:text-2xl mb-8 font-medium">
-              Guardando cada lugar, cada fecha y cada sentimiento. ✨
-            </p>
-            
-            <div className="flex flex-wrap gap-4 mb-10">
-              <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
-                <span className="text-2xl font-black text-romantic-500">{imagenes.length}</span>
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Momentos</span>
+          </>
+        ) : (
+          <div className="space-y-8 max-w-4xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-[40px] border border-white/40 shadow-xl mb-12">
+              <div className="text-center md:text-left">
+                <h2 className="text-3xl font-black text-gray-800 flex items-center justify-center md:justify-start gap-3">
+                  Diario de Nosotros <MessageCircleHeart className="text-romantic-500" />
+                </h2>
+                <p className="text-gray-500 mt-2">Pequeñas notas de amor, pensamientos o momentos que queremos recordar juntos.</p>
               </div>
-              <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-romantic-100 flex items-center gap-3">
-                <Clock className="text-romantic-300 w-5 h-5" />
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest text-romantic-500">Para siempre</span>
-              </div>
+              <button
+                onClick={() => setShowDiarioModal(true)}
+                className="bg-romantic-500 text-white px-8 py-5 rounded-[25px] font-black text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all flex items-center gap-2 group"
+              >
+                <PenLine className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                ESCRIBIR NUEVA NOTA
+              </button>
             </div>
 
-            {/* Timers Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="bg-white p-6 rounded-[32px] shadow-sm border border-romantic-100 relative overflow-hidden group hover:shadow-md transition-shadow"
-              >
-                <div className="absolute top-0 right-0 p-4 bg-romantic-50 text-romantic-300 rounded-bl-[32px]">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <p className="text-[10px] font-bold text-romantic-300 uppercase tracking-[0.2em] mb-4">Desde que todo empezó 💙</p>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-black text-gray-800 tracking-tighter">{timeTogether.noOficial.days}</span>
-                  <span className="text-sm font-bold text-gray-400">días</span>
-                </div>
-                <div className="flex gap-4 text-xs font-bold text-romantic-400">
-                  <span>{String(timeTogether.noOficial.hours).padStart(2, '0')}h</span>
-                  <span>{String(timeTogether.noOficial.minutes).padStart(2, '0')}m</span>
-                  <span>{String(timeTogether.noOficial.seconds).padStart(2, '0')}s</span>
-                </div>
-                <p className="mt-4 text-[10px] text-gray-400 font-medium">15 de diciembre, 2025</p>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="bg-romantic-500 p-6 rounded-[32px] shadow-lg shadow-romantic-100 relative overflow-hidden group hover:scale-[1.02] transition-transform"
-              >
-                <div className="absolute top-0 right-0 p-4 bg-white/10 text-white/50 rounded-bl-[32px]">
-                  <Heart className="w-5 h-5 fill-current" />
-                </div>
-                <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.2em] mb-4">Nuestro Sí Oficial 💍</p>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-black text-white tracking-tighter">{timeTogether.oficial.days}</span>
-                  <span className="text-sm font-bold text-white/70">días</span>
-                </div>
-                <div className="flex gap-4 text-xs font-bold text-white/60">
-                  <span>{String(timeTogether.oficial.hours).padStart(2, '0')}h</span>
-                  <span>{String(timeTogether.oficial.minutes).padStart(2, '0')}m</span>
-                  <span>{String(timeTogether.oficial.seconds).padStart(2, '0')}s</span>
-                </div>
-                <p className="mt-4 text-[10px] text-white/50 font-medium">14 de febrero, 2026</p>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Historias del día y Recuerdo del día */}
-          <div className="flex flex-col sm:flex-row gap-8 items-center justify-center md:items-start shrink-0">
-            {/* Historias del Día (Libros apilados) */}
-            {historiasDelDia.length > 0 && (
-              <motion.div 
-                initial={{ rotate: -5, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                className="relative w-64 h-80 flex flex-col items-center group cursor-pointer"
-                onClick={() => {
-                  setCurrentDayStoryIdx(0)
-                  setShowDayStoriesModal(true)
-                }}
-              >
-                <div className="absolute inset-0 bg-white rounded-2xl shadow-xl border border-romantic-100 transform translate-y-4 translate-x-4 rotate-6 group-hover:rotate-12 transition-transform duration-500"></div>
-                <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-romantic-100 transform translate-y-2 translate-x-2 rotate-3 group-hover:rotate-6 transition-transform duration-500"></div>
-                
-                <div className="relative w-full h-full bg-white rounded-2xl shadow-md border-4 border-white overflow-hidden flex flex-col group-hover:scale-105 transition-transform duration-500">
-                  <div className="flex-1 overflow-hidden relative">
-                    {isVideo(historiasDelDia[0].url) ? (
-                      <video src={historiasDelDia[0].url} className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={historiasDelDia[0].url} className="w-full h-full object-cover" alt="Recuerdos pasados" />
-                    )}
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center">
-                      {isVideo(historiasDelDia[0].url) && <Play className="text-white w-10 h-10 fill-white" />}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <AnimatePresence mode="popLayout">
+                {diario.map((nota, idx) => (
+                  <motion.div
+                    key={nota.id}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="bg-white p-8 rounded-[35px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-50 transition-all cursor-default"
+                  >
+                    <div className="absolute top-6 right-8 text-romantic-100 group-hover:text-romantic-200 transition-colors">
+                      <Sparkles className="w-8 h-8 opacity-40" />
                     </div>
-                    <div className="absolute top-3 left-3 bg-romantic-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg">
-                      {historiasDelDia.length} recuerdos pasados
-                    </div>
-                  </div>
-                  <div className="p-4 bg-white text-center">
-                    <p className="text-romantic-600 font-black text-sm uppercase tracking-tighter">Recuerdos de un día como hoy</p>
-                    <p className="text-[10px] text-gray-400 font-medium">Pulsa para abrir el álbum</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Recuerdo del día Card */}
-            {recuerdoDelDia && (
-              <motion.div 
-                initial={{ rotate: 2, scale: 0.9, opacity: 0 }}
-                animate={{ rotate: -2, scale: 1, opacity: 1 }}
-                whileHover={{ rotate: 0, scale: 1.05 }}
-                onClick={() => setSelectedImage(recuerdoDelDia)}
-                className="w-64 bg-white p-3 rounded-xl shadow-xl border-4 border-white transform transition-all cursor-pointer group"
-              >
-                <div className="aspect-square overflow-hidden rounded-lg mb-2 relative flex items-center justify-center bg-gray-100">
-                  {isVideo(recuerdoDelDia.url) ? (
-                    <div className="w-full h-full relative">
-                      <video src={recuerdoDelDia.url} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors">
-                        <Play className="text-white w-10 h-10 fill-white" />
+                    
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-full bg-romantic-100 flex items-center justify-center text-romantic-500 font-bold text-lg">
+                        {nota.autor[0]?.toUpperCase() || '❤'}
+                      </div>
+                      <div>
+                        <p className="text-gray-800 font-black text-sm leading-none">{nota.autor.toUpperCase()}</p>
+                        <p className="text-romantic-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
+                          {new Date(nota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <img src={recuerdoDelDia.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
-                  )}
-                  <div className="absolute top-2 right-2 bg-romantic-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
-                    Recuerdo del día
-                  </div>
-                </div>
-                <div className="px-1 text-center">
-                  <p className="text-romantic-600 text-xs font-bold mb-1 flex items-center justify-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                  <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
-                </div>
-              </motion.div>
+
+                    <div className="relative">
+                      <div className="absolute -left-4 top-0 w-1 h-full bg-romantic-100 rounded-full" />
+                      <p className="text-gray-600 leading-relaxed italic text-lg pr-4">
+                        "{nota.contenido}"
+                      </p>
+                    </div>
+
+                    <div className="mt-8 flex justify-end">
+                       <Heart className="w-5 h-5 text-romantic-200 fill-romantic-50 group-hover:scale-125 group-hover:text-romantic-400 transition-all" />
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {diario.length === 0 && (
+              <div className="text-center py-20 bg-white/40 rounded-[40px] border-2 border-dashed border-romantic-100">
+                <BookHeart className="w-16 h-16 text-romantic-200 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-400 font-bold">Aún no hay notas en nuestro diario...</p>
+                <p className="text-gray-300 text-sm mt-1">¡Sé el primero en escribir algo bonito hoy!</p>
+              </div>
             )}
           </div>
-        </motion.div>
+        )}
 
-        {/* Timeline Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="h-[1px] flex-1 bg-romantic-200"></div>
+
           <span className="text-romantic-400 font-bold text-sm tracking-widest uppercase">Nuestra Línea de Tiempo</span>
           <div className="h-[1px] flex-1 bg-romantic-200"></div>
         </div>
@@ -2123,6 +2404,86 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {showDiarioModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !enviandoNota && setShowDiarioModal(false)}
+              className="absolute inset-0 bg-romantic-900/40 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+            >
+              <div className="bg-gradient-to-r from-romantic-500 to-romantic-600 px-8 py-6 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BookHeart className="w-6 h-6" />
+                  <h3 className="text-xl font-black tracking-tight">Nueva Nota de Amor</h3>
+                </div>
+                {!enviandoNota && (
+                  <button 
+                    onClick={() => setShowDiarioModal(false)}
+                    className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={enviarNota} className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-romantic-400 uppercase tracking-widest ml-1">¿Quién escribe? ❤️</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="Tu nombre..."
+                    value={notaData.autor}
+                    onChange={(e) => setNotaData({...notaData, autor: e.target.value})}
+                    className="w-full bg-romantic-50/50 border-2 border-transparent focus:border-romantic-200 rounded-2xl p-4 text-gray-700 font-bold focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-romantic-400 uppercase tracking-widest ml-1">Tu nota de hoy ✨</label>
+                  <textarea 
+                    required
+                    rows="5"
+                    placeholder="Escribe algo que te haya hecho sonreír hoy..."
+                    value={notaData.contenido}
+                    onChange={(e) => setNotaData({...notaData, contenido: e.target.value})}
+                    className="w-full bg-romantic-50/50 border-2 border-transparent focus:border-romantic-200 rounded-2xl p-5 text-gray-700 font-serif text-lg leading-relaxed focus:outline-none transition-all resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={enviandoNota}
+                  className="w-full bg-romantic-500 text-white py-5 rounded-[25px] font-black text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all active:scale-[0.97] disabled:opacity-70 flex items-center justify-center gap-2"
+                >
+                  {enviandoNota ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>GUARDANDO EN EL DIARIO...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PenLine className="w-5 h-5" />
+                      <span>GUARDAR NOTA PARA SIEMPRE</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+
