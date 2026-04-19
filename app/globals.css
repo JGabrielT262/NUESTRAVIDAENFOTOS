@@ -27,6 +27,16 @@ body {
       column-count: 4;
     }
   }
+  @media (min-width: 1280px) {
+    .gallery-grid {
+      column-count: 5;
+    }
+  }
+  @media (min-width: 1536px) {
+    .gallery-grid {
+      column-count: 6;
+    }
+  }
   .gallery-item {
     break-inside: avoid;
     margin-bottom: 1rem;
