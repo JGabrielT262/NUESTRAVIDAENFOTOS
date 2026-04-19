@@ -809,23 +809,35 @@ export default function Home() {
         ctx.fillText("🎵 " + (selectedImage.metadata.audio.name || "Nuestra canción especial").substring(0, 40), cardPadding + 80, musicY + 10);
       }
 
-      // 7. Video Recording Setup
+      // 7. Render Loop and Recording Setup
+      const chunks = [];
       const videoStream = canvas.captureStream(30);
+      
+      // Determine support for MIME types
+      const types = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm', 'video/vp8'];
+      const mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+
       let audioStream = null;
       let audioEl = null;
+      let audioCtx = null;
 
       if (selectedImage.metadata?.audio) {
-        audioEl = new Audio(selectedImage.metadata.audio.url);
-        audioEl.crossOrigin = "anonymous";
-        audioEl.currentTime = selectedImage.metadata.audio.startTime || 0;
-        await audioEl.play();
-        
-        const ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
-        const source = ctxAudio.createMediaElementSource(audioEl);
-        const destination = ctxAudio.createMediaStreamDestination();
-        source.connect(destination);
-        source.connect(ctxAudio.destination);
-        audioStream = destination.stream;
+        try {
+          audioEl = new Audio(selectedImage.metadata.audio.url);
+          audioEl.crossOrigin = "anonymous";
+          audioEl.currentTime = selectedImage.metadata.audio.startTime || 0;
+          
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioCtx.createMediaElementSource(audioEl);
+          const destination = audioCtx.createMediaStreamDestination();
+          source.connect(destination);
+          source.connect(audioCtx.destination);
+          audioStream = destination.stream;
+          
+          await audioEl.play();
+        } catch (audioErr) {
+          console.error("Audio error during sharing:", audioErr);
+        }
       }
 
       if (audioStream) {
@@ -833,40 +845,124 @@ export default function Home() {
       }
 
       const recorder = new MediaRecorder(videoStream, { 
-        mimeType: 'video/webm;codecs=vp9,opus',
+        mimeType,
         videoBitsPerSecond: 5000000 
       });
       
-      const chunks = [];
-      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
       
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        setGeneratedVideoBlob(blob);
+      };
+
+      // 8. Start Recording with Render Loop
       recorder.start();
       
       const recordDuration = 10000; // 10 seconds
-      const steps = 100;
-      for (let i = 0; i <= steps; i++) {
-        setVideoProgress(i);
-        await new Promise(r => setTimeout(r, recordDuration / steps));
-      }
+      const startTime = Date.now();
+      
+      const render = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / recordDuration, 1);
+        
+        // Redraw content every frame to keep stream alive
+        // Background
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
 
-      recorder.stop();
-      if (audioEl) audioEl.pause();
+        // Card
+        ctx.shadowColor = 'rgba(248, 74, 126, 0.15)';
+        ctx.shadowBlur = 40;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        const r = 60;
+        if (ctx.roundRect) {
+          ctx.roundRect(cardPadding, cardY, cardWidth, cardHeight, r);
+        } else {
+          // Fallback for older browsers
+          ctx.moveTo(cardPadding + r, cardY);
+          ctx.arcTo(cardPadding + cardWidth, cardY, cardPadding + cardWidth, cardY + cardHeight, r);
+          ctx.arcTo(cardPadding + cardWidth, cardY + cardHeight, cardPadding, cardY + cardHeight, r);
+          ctx.arcTo(cardPadding, cardY + cardHeight, cardPadding, cardY, r);
+          ctx.arcTo(cardPadding, cardY, cardPadding + cardWidth, cardY, r);
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
 
-      const blob = await new Promise(resolve => {
-        recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
-      });
+        // Image
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(cardPadding, cardY, cardWidth, displayImgHeight);
+        ctx.clip();
+        ctx.drawImage(img, ix, iy, img.width * scale, img.height * scale);
+        ctx.restore();
 
-      setGeneratedVideoBlob(blob);
+        // Date Badge
+        ctx.fillStyle = '#f84a7e';
+        ctx.beginPath();
+        ctx.arc(cardPadding + 80, textStart + 40, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(dia, cardPadding + 80, textStart + 52);
+
+        // Texts
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 35px Arial';
+        ctx.fillText(`${mes.toUpperCase()} ${anio}`, cardPadding + 140, textStart + 35);
+        
+        ctx.fillStyle = '#f84a7e';
+        ctx.font = 'bold 25px Arial';
+        ctx.fillText(selectedImage.ubicacion || 'NUESTRO CORAZÓN', cardPadding + 140, textStart + 75);
+
+        // Quote
+        ctx.fillStyle = '#4b5563';
+        ctx.font = 'italic 45px Arial';
+        let line = '';
+        let currentY = textStart + 180;
+        const words = (selectedImage.nota || 'Un momento inolvidable...').split(' ');
+        for(let n = 0; n < words.length; n++) {
+          let testLine = line + words[n] + ' ';
+          if (ctx.measureText(testLine).width > (cardWidth - 160) && n > 0) {
+            ctx.fillText(line, cardPadding + 80, currentY);
+            line = words[n] + ' ';
+            currentY += 65;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, cardPadding + 80, currentY);
+
+        // Progress indicator for progress bar
+        setVideoProgress(Math.floor(progress * 100));
+
+        if (progress < 1) {
+          requestAnimationFrame(render);
+        } else {
+          recorder.stop();
+          if (audioEl) {
+            audioEl.pause();
+            audioEl.currentTime = 0;
+          }
+          if (audioCtx) audioCtx.close();
+        }
+      };
+
+      requestAnimationFrame(render);
 
     } catch (err) {
-      console.error(err);
-      alert("No se pudo generar el video: " + err.message);
+      console.error("Video generation error:", err);
+      alert("No se pudo generar el vídeo. " + err.message);
       setIsGeneratingVideo(false);
     } finally {
       setVideoProgress(100);
     }
-  }
-
   const handleShareVideo = async () => {
     if (!generatedVideoBlob || !selectedImage) return;
     
