@@ -491,15 +491,47 @@ export default function Home() {
         .update({ 
           fecha: editForm.fecha,
           ubicacion: editForm.ubicacion,
-          nota: editForm.nota
+          nota: editForm.nota,
+          metadata: selectedImage.metadata // preserve other metadata
         })
         .eq('id', selectedImage.id)
 
       if (error) throw error
 
-      setImagenes(imagenes.map(img => img.id === selectedImage.id ? { ...img, ...editForm } : img))
-      setSelectedImage({ ...selectedImage, ...editForm })
+      let finalMetadata = { ...(selectedImage.metadata || {}) }
+      
+      // Handle new audio if selected during edit
+      if (selectedAudioFile) {
+        const audioExt = selectedAudioFile.name.split('.').pop()
+        const audioName = `musica/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${audioExt}`
+        
+        const { error: audioError } = await supabase.storage
+          .from("fotos")
+          .upload(audioName, selectedAudioFile)
+        
+        if (audioError) throw audioError
+        
+        const { data: { publicUrl: audioUrl } } = supabase.storage
+          .from("fotos")
+          .getPublicUrl(audioName)
+          
+        finalMetadata.audio = {
+          url: audioUrl,
+          startTime: audioTrimData.startTime
+        }
+
+        // Update DB with the new metadata including audio
+        await supabase
+          .from("fotos")
+          .update({ metadata: finalMetadata })
+          .eq('id', selectedImage.id)
+      }
+
+      setImagenes(imagenes.map(img => img.id === selectedImage.id ? { ...img, ...editForm, metadata: finalMetadata } : img))
+      setSelectedImage({ ...selectedImage, ...editForm, metadata: finalMetadata })
       setIsEditing(false)
+      setSelectedAudioFile(null)
+      setAudioTrimData(null)
       
       confetti({
         particleCount: 50,
@@ -1582,6 +1614,40 @@ export default function Home() {
                           onChange={(e) => setEditForm({...editForm, nota: e.target.value})}
                           className="w-full bg-romantic-50/50 border border-romantic-100 rounded-2xl p-4 text-sm focus:outline-none focus:border-romantic-300 resize-none italic"
                         />
+                      </div>
+
+                      <div className="pt-2">
+                        <input 
+                          type="file" 
+                          accept="audio/*" 
+                          className="hidden" 
+                          ref={musicInputRef}
+                          onChange={(e) => {
+                            if (e.target.files[0]) {
+                              setSelectedAudioFile(e.target.files[0])
+                              setShowMusicModal(true)
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => musicInputRef.current.click()}
+                          className={`w-full py-3 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${
+                            (selectedAudioFile || selectedImage.metadata?.audio)
+                               ? 'border-romantic-200 bg-romantic-50 text-romantic-600' 
+                               : 'border-gray-200 text-gray-400 hover:border-romantic-200 hover:text-romantic-500'
+                          }`}
+                        >
+                          <Music className="w-4 h-4" />
+                          <span className="text-xs font-bold uppercase tracking-tight">
+                            {selectedImage.metadata?.audio ? "Cambiar Música" : "Añadir Música"}
+                          </span>
+                        </button>
+                        {(selectedAudioFile || selectedImage.metadata?.audio) && (
+                          <p className="text-[10px] text-center mt-2 text-romantic-400 font-bold italic">
+                            🎵 {selectedAudioFile ? selectedAudioFile.name : "Música actual guardada"}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
