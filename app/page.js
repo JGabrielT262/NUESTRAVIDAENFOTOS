@@ -60,8 +60,10 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({ fecha: '', ubicacion: '', nota: '' })
   const [updating, setUpdating] = useState(false)
-  const [vistas, setVistas] = useState([]) // Array of seen story IDs
+  const [vistas, setVistas] = useState([])
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
   const [trimmingFile, setTrimmingFile] = useState(null)
   const [trimData, setTrimData] = useState(null) // { startTime, endTime }
   const [selectedAudioFile, setSelectedAudioFile] = useState(null)
@@ -600,7 +602,7 @@ export default function Home() {
       saveAs(content, "nuestra-vida-juntos.zip")
       
       confetti({
-        particleCount: 100,
+          particleCount: 100,
         spread: 70,
         origin: { y: 0.6 }
       })
@@ -611,29 +613,194 @@ export default function Home() {
 
   async function compartirRecuerdo() {
     if (!selectedImage) return;
-    
-    const text = `🎨 ✨ *NUESTRA VIDA EN FOTOS* ✨ 🎨
-    
-📅 *Fecha:* ${new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-📍 *Lugar:* ${selectedImage.ubicacion || 'Nuestro corazón'}
-✍️ *Nota:* "${selectedImage.nota || 'Te amo'}"
-${selectedImage.metadata?.audio ? '🎵 _Incluye nuestra canción especial_' : ''}
+    setIsGeneratingVideo(true);
+    setVideoProgress(0);
 
-🔗 Mira este momento aquí: ${window.location.href}`;
+    try {
+      // 1. Prepare Canvas (Portrait for Stories)
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const width = 1080;
+      const height = 1920; 
+      canvas.width = width;
+      canvas.height = height;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Nuestra Vida Juntos ❤️',
-          text: text,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.log("Error sharing:", err);
+      // 2. Load Image
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = selectedImage.url;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error("Error al cargar la imagen. Inténtalo de nuevo."));
+      });
+
+      // 3. Draw Background
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#fff5f7');
+      gradient.addColorStop(1, '#ffffff');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // 4. White Card Area
+      const cardPadding = 60;
+      const cardY = 120;
+      const cardWidth = width - (cardPadding * 2);
+      const cardHeight = height - (cardY * 2);
+      
+      ctx.shadowColor = 'rgba(248, 74, 126, 0.15)';
+      ctx.shadowBlur = 40;
+      ctx.fillStyle = '#ffffff';
+      
+      // Rounded Card (Simple)
+      const radius = 60;
+      ctx.beginPath();
+      ctx.moveTo(cardPadding + radius, cardY);
+      ctx.arcTo(cardPadding + cardWidth, cardY, cardPadding + cardWidth, cardY + cardHeight, radius);
+      ctx.arcTo(cardPadding + cardWidth, cardY + cardHeight, cardPadding, cardY + cardHeight, radius);
+      ctx.arcTo(cardPadding, cardY + cardHeight, cardPadding, cardY, radius);
+      ctx.arcTo(cardPadding, cardY, cardPadding + cardWidth, cardY, radius);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 5. Draw Image (Top part of card)
+      const displayImgHeight = cardHeight * 0.65;
+      const scale = Math.max(cardWidth / img.width, displayImgHeight / img.height);
+      const ix = cardPadding + (cardWidth - img.width * scale) / 2;
+      const iy = cardY + (displayImgHeight - img.height * scale) / 2;
+      
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cardPadding, cardY, cardWidth, displayImgHeight);
+      ctx.clip();
+      ctx.drawImage(img, ix, iy, img.width * scale, img.height * scale);
+      ctx.restore();
+
+      // 6. Draw Content (Bottom part of card)
+      const textStart = cardY + displayImgHeight + 80;
+      
+      // Date Helper
+      const fechaObj = new Date(selectedImage.fecha + "T00:00:00");
+      const dia = fechaObj.getDate();
+      const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' });
+      const anio = fechaObj.getFullYear();
+
+      // Draw Date Circle/Badge
+      ctx.fillStyle = '#f84a7e';
+      ctx.beginPath();
+      ctx.arc(cardPadding + 80, textStart + 40, 40, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(dia, cardPadding + 80, textStart + 52);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 35px Arial';
+      ctx.fillText(`${mes.toUpperCase()} ${anio}`, cardPadding + 140, textStart + 35);
+      
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = 'bold 25px Arial';
+      ctx.fillText(selectedImage.ubicacion || 'NUESTRO CORAZÓN', cardPadding + 140, textStart + 75);
+
+      // Quote / Note
+      ctx.fillStyle = '#4b5563';
+      ctx.font = 'italic 45px Arial';
+      const words = (selectedImage.nota || 'Un momento inolvidable...').split(' ');
+      let line = '';
+      let lineY = textStart + 180;
+      const maxWidth = cardWidth - 160;
+      
+      for(let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line, cardPadding + 80, lineY);
+          line = words[n] + ' ';
+          lineY += 65;
+        } else {
+          line = testLine;
+        }
       }
-    } else {
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-      window.open(whatsappUrl, '_blank');
+      ctx.fillText(line, cardPadding + 80, lineY);
+
+      // Music Indicator
+      if (selectedImage.metadata?.audio) {
+        const musicY = cardY + cardHeight - 120;
+        ctx.fillStyle = 'rgba(248, 74, 126, 0.05)';
+        ctx.fillRect(cardPadding, musicY - 60, cardWidth, 120);
+        
+        ctx.fillStyle = '#f84a7e';
+        ctx.font = 'bold 28px Arial';
+        ctx.fillText("🎵 " + (selectedImage.metadata.audio.name || "Nuestra canción especial").substring(0, 40), cardPadding + 80, musicY + 10);
+      }
+
+      // 7. Video Recording Setup
+      const videoStream = canvas.captureStream(30);
+      let audioStream = null;
+      let audioEl = null;
+
+      if (selectedImage.metadata?.audio) {
+        audioEl = new Audio(selectedImage.metadata.audio.url);
+        audioEl.crossOrigin = "anonymous";
+        audioEl.currentTime = selectedImage.metadata.audio.startTime || 0;
+        await audioEl.play();
+        
+        const ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+        const source = ctxAudio.createMediaElementSource(audioEl);
+        const destination = ctxAudio.createMediaStreamDestination();
+        source.connect(destination);
+        source.connect(ctxAudio.destination);
+        audioStream = destination.stream;
+      }
+
+      if (audioStream) {
+        audioStream.getAudioTracks().forEach(track => videoStream.addTrack(track));
+      }
+
+      const recorder = new MediaRecorder(videoStream, { 
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 5000000 
+      });
+      
+      const chunks = [];
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+      
+      recorder.start();
+      
+      const recordDuration = 10000; // 10 seconds
+      const steps = 100;
+      for (let i = 0; i <= steps; i++) {
+        setVideoProgress(i);
+        await new Promise(r => setTimeout(r, recordDuration / steps));
+      }
+
+      recorder.stop();
+      if (audioEl) audioEl.pause();
+
+      const blob = await new Promise(resolve => {
+        recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+      });
+
+      // 8. Share or Save
+      const file = new File([blob], `nuestro-recuerdo-${dia}-${mes}.webm`, { type: 'video/webm' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Nuestro Recuerdo ❤️',
+          text: '❤️ Hecho con amor para ti'
+        });
+      } else {
+        saveAs(blob, `nuestro-recuerdo-${dia}-${mes}.webm`);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo generar el video: " + err.message);
+    } finally {
+      setIsGeneratingVideo(false);
+      setVideoProgress(0);
     }
   }
 
@@ -1752,10 +1919,13 @@ ${selectedImage.metadata?.audio ? '🎵 _Incluye nuestra canción especial_' : '
                         <div className="grid grid-cols-2 gap-3 w-full">
                           <button
                             onClick={compartirRecuerdo}
-                            className="py-4 rounded-2xl bg-romantic-50 text-romantic-600 text-sm font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2 border border-romantic-100 shadow-sm"
+                            className="py-4 rounded-2xl bg-romantic-50 text-romantic-600 text-[10px] font-black hover:bg-romantic-100 transition-all flex flex-col items-center justify-center gap-1 border border-romantic-100 shadow-sm leading-tight text-center px-1"
                           >
-                            <Share2 className="w-5 h-5" />
-                            <span>Compartir</span>
+                            <div className="flex items-center gap-2">
+                              <Share2 className="w-4 h-4" />
+                              <span>VÍDEO PARA REDES</span>
+                            </div>
+                            <span className="text-[8px] opacity-60">CON MÚSICA Y TEXTO</span>
                           </button>
                           
                           <button
@@ -1830,6 +2000,58 @@ ${selectedImage.metadata?.audio ? '🎵 _Incluye nuestra canción especial_' : '
         </div>
         <p>© 2026 Nuestra Vida Juntos • {imagenes.length} recuerdos guardados</p>
       </footer>
+
+      {/* Video Generation Progress Overlay */}
+      <AnimatePresence>
+        {isGeneratingVideo && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl p-6"
+          >
+            <div className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-romantic-100 overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${videoProgress}%` }}
+                  className="h-full bg-romantic-500"
+                />
+              </div>
+              
+              <div className="bg-romantic-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative overflow-hidden">
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                >
+                  <Sparkles className="text-romantic-500 w-12 h-12" />
+                </motion.div>
+              </div>
+              
+              <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">Creando tu Video...</h3>
+              <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                Estamos fusionando tu foto con la música para crear algo mágico. 🥺✨
+              </p>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-black text-romantic-400 uppercase tracking-widest px-1">
+                  <span>Procesando</span>
+                  <span>{videoProgress}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                   <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${videoProgress}%` }}
+                    className="h-full bg-romantic-500 rounded-full"
+                  />
+                </div>
+              </div>
+              
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-8">Por favor, no salgas de la app</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
