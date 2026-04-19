@@ -12,6 +12,7 @@ export default function VideoTrimmer({ file, onConfirm, onCancel }) {
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [activeHandle, setActiveHandle] = useState('start') // 'start' or 'end'
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -145,9 +146,12 @@ export default function VideoTrimmer({ file, onConfirm, onCancel }) {
                     if (val < endTime) {
                       setStartTime(val)
                       videoRef.current.currentTime = val
+                      setActiveHandle('start')
                     }
                   }}
-                  className="absolute inset-x-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  onMouseDown={() => setActiveHandle('start')}
+                  onTouchStart={() => setActiveHandle('start')}
+                  className={`absolute inset-x-0 w-full h-full opacity-0 cursor-pointer ${activeHandle === 'start' ? 'z-30' : 'z-20'}`}
                 />
                 <input 
                   type="range"
@@ -160,9 +164,12 @@ export default function VideoTrimmer({ file, onConfirm, onCancel }) {
                     if (val > startTime) {
                       setEndTime(val)
                       videoRef.current.currentTime = val
+                      setActiveHandle('end')
                     }
                   }}
-                  className="absolute inset-x-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  onMouseDown={() => setActiveHandle('end')}
+                  onTouchStart={() => setActiveHandle('end')}
+                  className={`absolute inset-x-0 w-full h-full opacity-0 cursor-pointer ${activeHandle === 'end' ? 'z-30' : 'z-20'}`}
                 />
 
                 <div className="absolute inset-0 pointer-events-none flex items-center px-2">
