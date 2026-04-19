@@ -18,6 +18,7 @@ import {
   X,
   Clock,
   ChevronRight,
+  ChevronLeft,
   Trash2,
   LogOut,
   Key,
@@ -2017,8 +2018,40 @@ export default function Home() {
               onClick={() => setSelectedImage(null)}
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
+
+            {/* Botones de Navegación */}
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-12 pointer-events-none z-[100]">
+              {imagenes.findIndex(img => img.id === selectedImage.id) > 0 ? (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const idx = imagenes.findIndex(img => img.id === selectedImage.id);
+                    setSelectedImage(imagenes[idx - 1]);
+                    setIsEditing(false);
+                  }}
+                  className="p-3 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md transition-all active:scale-95 pointer-events-auto group"
+                >
+                  <ChevronLeft className="w-8 h-8 group-hover:-translate-x-1 transition-transform" />
+                </button>
+              ) : <div />}
+
+              {imagenes.findIndex(img => img.id === selectedImage.id) < imagenes.length - 1 ? (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const idx = imagenes.findIndex(img => img.id === selectedImage.id);
+                    setSelectedImage(imagenes[idx + 1]);
+                    setIsEditing(false);
+                  }}
+                  className="p-3 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md transition-all active:scale-95 pointer-events-auto group"
+                >
+                  <ChevronRight className="w-8 h-8 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : <div />}
+            </div>
             
             <motion.div 
+              key={selectedImage.id}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
