@@ -64,6 +64,7 @@ export default function Home() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0)
+  const [generatedVideoBlob, setGeneratedVideoBlob] = useState(null)
   const [trimmingFile, setTrimmingFile] = useState(null)
   const [trimData, setTrimData] = useState(null) // { startTime, endTime }
   const [selectedAudioFile, setSelectedAudioFile] = useState(null)
@@ -128,6 +129,13 @@ export default function Home() {
       }
     }
   }, [SECRET_KEY, ADMIN_KEY])
+  
+  // Pausar música automáticamente al editar o generar video
+  useEffect(() => {
+    if (isEditing || isGeneratingVideo) {
+      if (audioRef.current) audioRef.current.pause()
+    }
+  }, [isEditing, isGeneratingVideo])
 
   // Lógica para historias del día (cerca de la fecha actual de años anteriores)
   useEffect(() => {
@@ -783,8 +791,25 @@ export default function Home() {
         recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
       });
 
-      // 8. Share or Save
-      const file = new File([blob], `nuestro-recuerdo-${dia}-${mes}.webm`, { type: 'video/webm' });
+      setGeneratedVideoBlob(blob);
+
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo generar el video: " + err.message);
+      setIsGeneratingVideo(false);
+    } finally {
+      setVideoProgress(100);
+    }
+  }
+
+  const handleShareVideo = async () => {
+    if (!generatedVideoBlob || !selectedImage) return;
+    
+    const fechaObj = new Date(selectedImage.fecha + "T00:00:00");
+    const label = `nuestro-recuerdo-${fechaObj.getDate()}.webm`;
+    const file = new File([generatedVideoBlob], label, { type: 'video/webm' });
+
+    try {
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -792,15 +817,11 @@ export default function Home() {
           text: '❤️ Hecho con amor para ti'
         });
       } else {
-        saveAs(blob, `nuestro-recuerdo-${dia}-${mes}.webm`);
+        saveAs(generatedVideoBlob, label);
       }
-
     } catch (err) {
-      console.error(err);
-      alert("No se pudo generar el video: " + err.message);
-    } finally {
-      setIsGeneratingVideo(false);
-      setVideoProgress(0);
+      console.error("Share error:", err);
+      saveAs(generatedVideoBlob, label);
     }
   }
 
@@ -2010,45 +2031,95 @@ export default function Home() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl p-6"
           >
-            <div className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-romantic-100 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${videoProgress}%` }}
-                  className="h-full bg-romantic-500"
-                />
+              <div className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
+                {!generatedVideoBlob ? (
+                  <>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-romantic-100 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${videoProgress}%` }}
+                        className="h-full bg-romantic-500"
+                      />
+                    </div>
+                    
+                    <div className="bg-romantic-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative overflow-hidden">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                      >
+                        <Sparkles className="text-romantic-500 w-12 h-12" />
+                      </motion.div>
+                    </div>
+                    
+                    <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">Creando tu Video...</h3>
+                    <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                      Estamos fusionando tu foto con la música para crear algo mágico. 🥺✨
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-black text-romantic-400 uppercase tracking-widest px-1">
+                        <span>Procesando</span>
+                        <span>{videoProgress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                         <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${videoProgress}%` }}
+                          className="h-full bg-romantic-500 rounded-full"
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                  >
+                    <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <CheckCircle2 className="text-green-500 w-10 h-10" />
+                    </div>
+                    
+                    <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">¡Video Listo!</h3>
+                    <p className="text-gray-500 text-sm mb-8">Ya tenemos tu video preparado con vuestro momento especial ❤️</p>
+                    
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={handleShareVideo}
+                        className="w-full bg-romantic-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-romantic-200 hover:bg-romantic-600 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Share2 className="w-5 h-5" />
+                        <span>Compartir ahora</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const fechaObj = new Date(selectedImage.fecha + "T00:00:00");
+                          saveAs(generatedVideoBlob, `nuestro-recuerdo-${fechaObj.getDate()}.webm`);
+                        }}
+                        className="w-full bg-gray-100 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-5 h-5" />
+                        <span>Solo descargar</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsGeneratingVideo(false);
+                          setGeneratedVideoBlob(null);
+                          setVideoProgress(0);
+                        }}
+                        className="text-gray-400 text-xs font-bold mt-4 hover:text-gray-600"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {!generatedVideoBlob && (
+                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-8">Por favor, no salgas de la app</p>
+                )}
               </div>
-              
-              <div className="bg-romantic-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative overflow-hidden">
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                >
-                  <Sparkles className="text-romantic-500 w-12 h-12" />
-                </motion.div>
-              </div>
-              
-              <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">Creando tu Video...</h3>
-              <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                Estamos fusionando tu foto con la música para crear algo mágico. 🥺✨
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black text-romantic-400 uppercase tracking-widest px-1">
-                  <span>Procesando</span>
-                  <span>{videoProgress}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                   <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${videoProgress}%` }}
-                    className="h-full bg-romantic-500 rounded-full"
-                  />
-                </div>
-              </div>
-              
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-8">Por favor, no salgas de la app</p>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
