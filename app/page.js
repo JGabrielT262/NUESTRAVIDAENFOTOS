@@ -54,6 +54,7 @@ export default function Home() {
   const [editForm, setEditForm] = useState({ fecha: '', ubicacion: '', nota: '' })
   const [updating, setUpdating] = useState(false)
   const [vistas, setVistas] = useState([]) // Array of seen story IDs
+  const [uploadProgress, setUploadProgress] = useState(0)
   
   // Historias destacadas del día (cerca de la fecha actual de años anteriores)
   const [historiasDelDia, setHistoriasDelDia] = useState([])
@@ -283,18 +284,74 @@ export default function Home() {
     }
   }
 
+  const compressImage = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target.result
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const MAX_WIDTH = 1200
+          const MAX_HEIGHT = 1200
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }))
+          }, 'image/jpeg', 0.8)
+        }
+      }
+    })
+  }
+
   async function subirImagenes() {
     if (selectedFiles.length === 0) return
+    
+    // Check for large videos (> 50MB)
+    const largeVideos = selectedFiles.filter(f => isVideo(f.name) && f.size > 50 * 1024 * 1024)
+    if (largeVideos.length > 0) {
+      if (!confirm(`Has seleccionado ${largeVideos.length} video(s) muy grandes (más de 50MB). El almacenamiento gratuito de Supabase tiene un límite y podrían no subirse o tardar mucho. ¿Deseas intentarlo de todas formas? 😅`)) return
+    }
+
     setUploading(true)
     
     try {
       for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop()
+        let fileToUpload = file
+        
+        // Compress if it's an image
+        if (!isVideo(file.name) && file.type.startsWith('image/')) {
+          fileToUpload = await compressImage(file)
+        }
+
+        const fileExt = fileToUpload.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`
         
         const { error: uploadError } = await supabase.storage
           .from("fotos")
-          .upload(fileName, file)
+          .upload(fileName, fileToUpload, {
+            onUploadProgress: (progress) => {
+              const percent = (progress.loaded / progress.total) * 100
+              setUploadProgress(Math.round(percent))
+            }
+          })
 
         if (uploadError) throw uploadError
 
@@ -324,6 +381,7 @@ export default function Home() {
 
       setShowUploadModal(false)
       setSelectedFiles([])
+      setUploadProgress(0)
       setUploadData({
         fecha: new Date().toISOString().split('T')[0],
         ubicacion: "",
@@ -1090,17 +1148,29 @@ export default function Home() {
                 <button
                   onClick={subirImagenes}
                   disabled={uploading}
-                  className="w-full bg-romantic-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-romantic-200 hover:bg-romantic-600 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                  className="w-full bg-romantic-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-romantic-200 hover:bg-romantic-600 transition-all active:scale-[0.98] disabled:opacity-70 flex flex-col items-center justify-center gap-1"
                 >
                   {uploading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Guardando para siempre...</span>
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Guardando para siempre...</span>
+                      </div>
+                      <div className="w-full max-w-[200px] h-1 bg-white/30 rounded-full mt-2 overflow-hidden px-4">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${uploadProgress}%` }}
+                          className="h-full bg-white"
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold opacity-80">{uploadProgress}%</span>
                     </>
                   ) : (
                     <>
-                      <Heart className="w-5 h-5" />
-                      <span>Guardar en Nuestra Vida</span>
+                      <div className="flex items-center gap-2">
+                        <Heart className="w-5 h-5" />
+                        <span>Guardar en Nuestra Vida</span>
+                      </div>
                     </>
                   )}
                 </button>

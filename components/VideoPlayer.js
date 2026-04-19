@@ -94,19 +94,21 @@ export default function VideoPlayer({ src, className = "" }) {
             </div>
 
             {/* Center Play Button Overlay */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-romantic-500/80 p-6 rounded-full shadow-xl backdrop-blur-sm"
-              >
-                {isPlaying ? (
-                  <Pause className="w-10 h-10 text-white fill-white" />
-                ) : (
-                  <Play className="w-10 h-10 text-white fill-white ml-2" />
-                )}
-              </motion.div>
-            </div>
+            <AnimatePresence>
+              {!isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.button
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 1.2, opacity: 0 }}
+                    onClick={togglePlay}
+                    className="bg-romantic-500/80 p-5 rounded-full shadow-2xl backdrop-blur-md hover:bg-romantic-600 transition-colors group/play"
+                  >
+                    <Play className="w-8 h-8 text-white fill-white ml-1 group-hover/play:scale-110 transition-transform" />
+                  </motion.button>
+                </div>
+              )}
+            </AnimatePresence>
 
             {/* Bottom Controls */}
             <div className="space-y-4">
