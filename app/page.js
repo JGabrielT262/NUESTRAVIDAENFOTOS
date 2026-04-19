@@ -34,6 +34,7 @@ import HeartRain from "@/components/HeartRain"
 import { Play, Pause, Volume2, VolumeX } from "lucide-react"
 import VideoPlayer from "@/components/VideoPlayer"
 import VideoTrimmer from "@/components/VideoTrimmer"
+import MusicSelector from "@/components/MusicSelector"
 
 const isVideo = (url) => {
   if (!url) return false
@@ -58,6 +59,12 @@ export default function Home() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [trimmingFile, setTrimmingFile] = useState(null)
   const [trimData, setTrimData] = useState(null) // { startTime, endTime }
+  const [selectedAudioFile, setSelectedAudioFile] = useState(null)
+  const [audioTrimData, setAudioTrimData] = useState(null) // { startTime }
+  const [showMusicModal, setShowMusicModal] = useState(false)
+  
+  const audioRef = useRef(null)
+  const musicInputRef = useRef(null)
   
   // Historias destacadas del día (cerca de la fecha actual de años anteriores)
   const [historiasDelDia, setHistoriasDelDia] = useState([])
@@ -173,6 +180,44 @@ export default function Home() {
       setRecuerdoDelDia(imagenes[randomIdx])
     }
   }, [imagenes, recuerdoDelDia])
+
+  useEffect(() => {
+    if (selectedImage && selectedImage.metadata?.audio) {
+      if (audioRef.current) {
+        audioRef.current.src = selectedImage.metadata.audio.url
+        audioRef.current.currentTime = selectedImage.metadata.audio.startTime
+        audioRef.current.play().catch(e => console.log("Auto-play prevented"))
+        
+        const checkEnd = setInterval(() => {
+          if (audioRef.current && audioRef.current.currentTime >= selectedImage.metadata.audio.startTime + 30) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = selectedImage.metadata.audio.startTime
+            audioRef.current.play()
+          }
+        }, 1000)
+        return () => clearInterval(checkEnd)
+      }
+    } else {
+      if (audioRef.current) audioRef.current.pause()
+    }
+  }, [selectedImage])
+
+  useEffect(() => {
+    if (selectedStoryIndex !== null) {
+      const story = historiasOrdenadas[selectedStoryIndex]
+      if (story.metadata?.audio) {
+        if (audioRef.current) {
+          audioRef.current.src = story.metadata.audio.url
+          audioRef.current.currentTime = story.metadata.audio.startTime
+          audioRef.current.play().catch(e => console.log("Auto-play prevented"))
+        }
+      } else {
+        if (audioRef.current) audioRef.current.pause()
+      }
+    } else {
+      if (audioRef.current) audioRef.current.pause()
+    }
+  }, [selectedStoryIndex])
 
   function verificarClave(clave) {
     if (clave === ADMIN_KEY) {
@@ -348,9 +393,32 @@ export default function Home() {
     setUploading(true)
     
     try {
+      let finalMetadata = trimData ? { trim: trimData } : {}
+
       for (const file of selectedFiles) {
         let fileToUpload = file
         
+        // Handle audio if present for this image
+        if (selectedAudioFile) {
+          const audioExt = selectedAudioFile.name.split('.').pop()
+          const audioName = `musica/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${audioExt}`
+          
+          const { error: audioError } = await supabase.storage
+            .from("fotos")
+            .upload(audioName, selectedAudioFile)
+          
+          if (audioError) throw audioError
+          
+          const { data: { publicUrl: audioUrl } } = supabase.storage
+            .from("fotos")
+            .getPublicUrl(audioName)
+            
+          finalMetadata.audio = {
+            url: audioUrl,
+            startTime: audioTrimData.startTime
+          }
+        }
+
         // Compress if it's an image
         if (!isVideo(file.name) && file.type.startsWith('image/')) {
           fileToUpload = await compressImage(file)
@@ -382,7 +450,7 @@ export default function Home() {
             fecha: uploadData.fecha,
             ubicacion: uploadData.ubicacion,
             nota: uploadData.nota,
-            metadata: trimData ? { trim: trimData } : null
+            metadata: Object.keys(finalMetadata).length > 0 ? finalMetadata : null
           }])
 
         if (dbError) throw dbError
@@ -398,6 +466,9 @@ export default function Home() {
       setShowUploadModal(false)
       setSelectedFiles([])
       setUploadProgress(0)
+      setSelectedAudioFile(null)
+      setAudioTrimData(null)
+      setTrimData(null)
       setUploadData({
         fecha: new Date().toISOString().split('T')[0],
         ubicacion: "",
@@ -579,6 +650,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-romantic-50 pb-20">
       <HeartRain />
+      <audio ref={audioRef} className="hidden" />
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-romantic-100 px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
@@ -899,6 +971,12 @@ export default function Home() {
                     </span>
                   </div>
 
+                  {img.metadata?.audio && (
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
+                      <Music className="w-3.5 h-3.5 text-romantic-500 animate-bounce" />
+                    </div>
+                  )}
+
                   {isAdmin && (
                     <button
                       onClick={(e) => {
@@ -1159,6 +1237,42 @@ export default function Home() {
                       />
                     </div>
                   </div>
+
+                  {!isVideo(selectedFiles[0]?.name) && (
+                    <div className="pt-2">
+                       <input 
+                         type="file" 
+                         accept="audio/*" 
+                         className="hidden" 
+                         ref={musicInputRef}
+                         onChange={(e) => {
+                           if (e.target.files[0]) {
+                             setSelectedAudioFile(e.target.files[0])
+                             setShowMusicModal(true)
+                           }
+                         }}
+                       />
+                       <button
+                         type="button"
+                         onClick={() => musicInputRef.current.click()}
+                         className={`w-full py-3 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${
+                          selectedAudioFile 
+                            ? 'border-romantic-200 bg-romantic-50 text-romantic-600' 
+                            : 'border-gray-200 text-gray-400 hover:border-romantic-200 hover:text-romantic-500'
+                         }`}
+                       >
+                         <Music className="w-4 h-4" />
+                         <span className="text-xs font-bold uppercase tracking-tight">
+                           {selectedAudioFile ? "Cambiar Música" : "Añadir Música de Fondo"}
+                         </span>
+                       </button>
+                       {selectedAudioFile && (
+                         <p className="text-[10px] text-center mt-2 text-romantic-400 font-bold italic">
+                           🎵 {selectedAudioFile.name} (Fragmento listo)
+                         </p>
+                       )}
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -1561,6 +1675,25 @@ export default function Home() {
         ref={fileInputRef}
         className="hidden" 
       />
+
+      <audio ref={audioRef} loop={false} />
+
+      <AnimatePresence>
+        {showMusicModal && selectedAudioFile && (
+          <MusicSelector 
+            file={selectedAudioFile}
+            onConfirm={(data) => {
+              setAudioTrimData(data)
+              setShowMusicModal(false)
+            }}
+            onCancel={() => {
+              setSelectedAudioFile(null)
+              setAudioTrimData(null)
+              setShowMusicModal(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {trimmingFile && (
