@@ -941,6 +941,18 @@ export default function Home() {
         }
         ctx.fillText(line, cardPadding + 80, currentY);
 
+        // Music Indicator (INSIDE RENDER LOOP)
+        if (selectedImage.metadata?.audio) {
+          const musicY = cardY + cardHeight - 120;
+          ctx.fillStyle = 'rgba(248, 74, 126, 0.05)';
+          ctx.fillRect(cardPadding, musicY - 60, cardWidth, 120);
+          
+          ctx.fillStyle = '#f84a7e';
+          ctx.font = 'bold 28px Arial';
+          ctx.textAlign = 'left';
+          ctx.fillText("🎵 " + (selectedImage.metadata.audio.name || "Nuestra canción especial").substring(0, 40), cardPadding + 80, musicY + 10);
+        }
+
         // Progress indicator for progress bar
         setVideoProgress(Math.floor(progress * 100));
 
