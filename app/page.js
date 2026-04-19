@@ -474,32 +474,34 @@ export default function Home() {
     
     try {
       let finalMetadata = trimData ? { trim: trimData } : {}
+      
+      // 1. Upload audio ONCE if present for this batch
+      if (selectedAudioFile) {
+        setUploadProgress(10) // Small start progress
+        const audioExt = selectedAudioFile.name.split('.').pop()
+        const audioName = `musica/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${audioExt}`
+        
+        const { error: audioError } = await supabase.storage
+          .from("fotos")
+          .upload(audioName, selectedAudioFile)
+        
+        if (audioError) throw audioError
+        
+        const { data: { publicUrl: audioUrl } } = supabase.storage
+          .from("fotos")
+          .getPublicUrl(audioName)
+          
+        finalMetadata.audio = {
+          url: audioUrl,
+          name: selectedAudioFile.name.replace(/\.[^/.]+$/, ""),
+          startTime: audioTrimData?.startTime || 0
+        }
+      }
 
+      // 2. Upload images loop
       for (const file of selectedFiles) {
         let fileToUpload = file
         
-        // Handle audio if present for this image
-        if (selectedAudioFile) {
-          const audioExt = selectedAudioFile.name.split('.').pop()
-          const audioName = `musica/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${audioExt}`
-          
-          const { error: audioError } = await supabase.storage
-            .from("fotos")
-            .upload(audioName, selectedAudioFile)
-          
-          if (audioError) throw audioError
-          
-          const { data: { publicUrl: audioUrl } } = supabase.storage
-            .from("fotos")
-            .getPublicUrl(audioName)
-            
-          finalMetadata.audio = {
-            url: audioUrl,
-            name: selectedAudioFile.name.replace(/\.[^/.]+$/, ""), // Clean extension
-            startTime: audioTrimData.startTime
-          }
-        }
-
         // Compress if it's an image
         if (!isVideo(file.name) && file.type.startsWith('image/')) {
           fileToUpload = await compressImage(file)
