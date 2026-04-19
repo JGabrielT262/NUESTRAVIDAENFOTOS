@@ -495,6 +495,7 @@ export default function Home() {
             
           finalMetadata.audio = {
             url: audioUrl,
+            name: selectedAudioFile.name.replace(/\.[^/.]+$/, ""), // Clean extension
             startTime: audioTrimData.startTime
           }
         }
@@ -597,6 +598,7 @@ export default function Home() {
           
         finalMetadata.audio = {
           url: audioUrl,
+          name: selectedAudioFile.name.replace(/\.[^/.]+$/, ""), // Clean extension
           startTime: audioTrimData.startTime
         }
 
