@@ -901,38 +901,6 @@ export default function Home() {
           animate={{ y: 0, opacity: 1 }}
           className="bg-white p-10 rounded-[40px] shadow-2xl max-w-md w-full border border-romantic-100 relative overflow-hidden"
         >
-          {/* Tabs romantic switcher */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white/50 backdrop-blur-md p-2 rounded-[30px] shadow-xl border border-white/40 flex gap-2">
-            <button
-              onClick={() => setActiveTab('album')}
-              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
-                activeTab === 'album' 
-                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
-                  : 'text-gray-400 hover:text-romantic-400'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4" />
-              NUESTRO ÁLBUM
-            </button>
-            <button
-              onClick={() => setActiveTab('diario')}
-              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
-                activeTab === 'diario' 
-                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
-                  : 'text-gray-400 hover:text-romantic-400'
-              }`}
-            >
-              <BookHeart className="w-4 h-4" />
-              DIARIO DE AMOR
-            </button>
-          </div>
-        </div>
-
-        {activeTab === 'album' ? (
-          <>
-            {/* Historias Estilo Instagram */}
-            <div className="mb-12 relative">
           {/* Decorative hearts */}
           <div className="absolute -top-6 -right-6 text-romantic-100 rotate-12">
             <Heart className="w-24 h-24 fill-current" />
@@ -996,6 +964,7 @@ export default function Home() {
       </div>
     )
   }
+
 
   return (
     <div className="min-h-screen bg-romantic-50 pb-20">
