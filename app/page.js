@@ -25,13 +25,17 @@ import {
   EyeOff,
   Pencil,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  Music,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
 import confetti from "canvas-confetti"
 import HeartRain from "@/components/HeartRain"
-import { Play, Pause, Volume2, VolumeX } from "lucide-react"
 import VideoPlayer from "@/components/VideoPlayer"
 import VideoTrimmer from "@/components/VideoTrimmer"
 import MusicSelector from "@/components/MusicSelector"
