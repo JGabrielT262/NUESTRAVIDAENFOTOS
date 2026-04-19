@@ -1347,11 +1347,30 @@ export default function Home() {
                     <div className="p-4 bg-white">
                       {img.ubicacion && (
                         <div className="flex items-center gap-1.5 text-romantic-500 mb-2">
-                          <MapPin className="w-3 h-3" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">{img.ubicacion}</span>
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="text-xs font-semibold truncate">{img.ubicacion}</span>
                         </div>
                       )}
-                      <p className="text-gray-600 text-sm line-clamp-2">{img.nota}</p>
+                      
+                      {img.nota && (
+                        <div className="flex gap-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" />
+                          <p className="text-gray-500 text-xs italic leading-relaxed line-clamp-3">
+                            {img.nota}
+                          </p>
+                        </div>
+                      )}
+
+                      {!img.nota && !img.ubicacion && (
+                        <p className="text-gray-300 text-[10px] italic">Momento guardado con amor</p>
+                      )}
+                      
+                      <div className="mt-4 pt-3 border-t border-romantic-50 flex justify-between items-center">
+                        <span className="text-[9px] text-gray-400 uppercase tracking-tighter">
+                          {new Date(img.fecha).getFullYear()}
+                        </span>
+                        <Heart className="w-3.5 h-3.5 text-romantic-200 group-hover:text-romantic-500 group-hover:fill-romantic-500 transition-colors" />
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -1427,110 +1446,8 @@ export default function Home() {
             )}
           </div>
         )}
-
-
-          <span className="text-romantic-400 font-bold text-sm tracking-widest uppercase">Nuestra Línea de Tiempo</span>
-          <div className="h-[1px] flex-1 bg-romantic-200"></div>
-        </div>
-
-        {/* Gallery Grid */}
-        <div className="gallery-grid">
-          <AnimatePresence>
-            {imagenes.map((img, index) => (
-              <motion.div
-                key={img.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-                className="gallery-item group relative overflow-hidden rounded-3xl bg-white shadow-sm hover:shadow-2xl transition-all duration-500"
-              >
-                <div 
-                  className="relative cursor-pointer min-h-[200px] flex items-center justify-center bg-gray-50"
-                  onClick={() => setSelectedImage(img)}
-                >
-                  {isVideo(img.url) ? (
-                    <div className="w-full relative">
-                      <video src={img.url} className="w-full h-auto object-cover rounded-t-3xl" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-all">
-                        <div className="bg-white/90 p-4 rounded-full shadow-xl transform transition-transform group-hover:scale-110">
-                          <Play className="text-romantic-500 w-8 h-8 fill-romantic-500" />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <img 
-                      src={img.url} 
-                      className="w-full h-auto object-cover rounded-t-3xl transition-transform duration-500 group-hover:scale-105" 
-                      alt="Recuerdo"
-                      loading="lazy"
-                    />
-                  )}
-                  
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-sm flex items-center gap-2">
-                    <Calendar className="w-3 h-3 text-romantic-500" />
-                    <span className="text-[10px] font-bold text-gray-700">
-                      {new Date(img.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
-
-                  {img.metadata?.audio && (
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
-                      <Music className="w-3.5 h-3.5 text-romantic-500 animate-bounce" />
-                    </div>
-                  )}
-
-                  {isAdmin && (
-                    <div className="absolute top-4 right-4 flex gap-2">
-                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedImage(img);
-                          setIsEditing(true);
-                          setEditForm({ fecha: img.fecha, ubicacion: img.ubicacion, nota: img.nota });
-                        }}
-                        className="bg-white/90 hover:bg-romantic-50 text-romantic-500 p-2.5 rounded-full shadow-lg transition-all active:scale-90"
-                        title="Editar Recuerdo"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 bg-white">
-                  {img.ubicacion && (
-                    <div className="flex items-center gap-1.5 text-romantic-500 mb-2">
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold truncate">{img.ubicacion}</span>
-                    </div>
-                  )}
-                  
-                  {img.nota && (
-                    <div className="flex gap-2">
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" />
-                      <p className="text-gray-500 text-xs italic leading-relaxed line-clamp-3">
-                        {img.nota}
-                      </p>
-                    </div>
-                  )}
-
-                  {!img.nota && !img.ubicacion && (
-                    <p className="text-gray-300 text-[10px] italic">Momento guardado con amor</p>
-                  )}
-                  
-                  <div className="mt-4 pt-3 border-t border-romantic-50 flex justify-between items-center">
-                    <span className="text-[9px] text-gray-400 uppercase tracking-tighter">
-                      {new Date(img.fecha).getFullYear()}
-                    </span>
-                    <Heart className="w-3.5 h-3.5 text-romantic-200 group-hover:text-romantic-500 group-hover:fill-romantic-500 transition-colors" />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
       </main>
+
 
       {/* Day Stories Modal (Presentación) */}
       <AnimatePresence>
