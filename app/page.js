@@ -33,6 +33,7 @@ import confetti from "canvas-confetti"
 import HeartRain from "@/components/HeartRain"
 import { Play, Pause, Volume2, VolumeX } from "lucide-react"
 import VideoPlayer from "@/components/VideoPlayer"
+import VideoTrimmer from "@/components/VideoTrimmer"
 
 const isVideo = (url) => {
   if (!url) return false
@@ -55,6 +56,8 @@ export default function Home() {
   const [updating, setUpdating] = useState(false)
   const [vistas, setVistas] = useState([]) // Array of seen story IDs
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [trimmingFile, setTrimmingFile] = useState(null)
+  const [trimData, setTrimData] = useState(null) // { startTime, endTime }
   
   // Historias destacadas del día (cerca de la fecha actual de años anteriores)
   const [historiasDelDia, setHistoriasDelDia] = useState([])
@@ -279,9 +282,21 @@ export default function Home() {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files)
     if (files.length > 0) {
-      setSelectedFiles(files)
-      setShowUploadModal(true)
+      const file = files[0]
+      if (isVideo(file.name)) {
+        setTrimmingFile(file)
+      } else {
+        setSelectedFiles(files)
+        setShowUploadModal(true)
+      }
     }
+  }
+
+  const handleConfirmTrim = (data) => {
+    setTrimData(data)
+    setSelectedFiles([trimmingFile])
+    setTrimmingFile(null)
+    setShowUploadModal(true)
   }
 
   const compressImage = async (file) => {
@@ -366,7 +381,8 @@ export default function Home() {
             name: file.name,
             fecha: uploadData.fecha,
             ubicacion: uploadData.ubicacion,
-            nota: uploadData.nota
+            nota: uploadData.nota,
+            metadata: trimData ? { trim: trimData } : null
           }])
 
         if (dbError) throw dbError
@@ -1274,16 +1290,13 @@ export default function Home() {
               <div className="absolute inset-0 flex items-center justify-center bg-black">
                 <AnimatePresence mode="wait">
                   {isVideo(historiasOrdenadas[selectedStoryIndex].url) ? (
-                    <motion.video 
-                      key={historiasOrdenadas[selectedStoryIndex].id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      src={historiasOrdenadas[selectedStoryIndex].url}
+                    <VideoPlayer 
+                      src={historiasOrdenadas[selectedStoryIndex].url} 
                       className="max-h-full w-full object-contain"
                       autoPlay
                       muted
                       playsInline
+                      trim={historiasOrdenadas[selectedStoryIndex].metadata?.trim}
                       onEnded={() => {
                         if (selectedStoryIndex < historiasOrdenadas.length - 1) {
                           setSelectedStoryIndex(selectedStoryIndex + 1)
@@ -1377,6 +1390,7 @@ export default function Home() {
                     <VideoPlayer 
                       src={selectedImage.url} 
                       className="w-full h-auto block" 
+                      trim={selectedImage.metadata?.trim}
                     />
                   ) : (
                     <img src={selectedImage.url} className="w-full h-auto block" alt="Recuerdo" />
@@ -1547,6 +1561,20 @@ export default function Home() {
         ref={fileInputRef}
         className="hidden" 
       />
+
+      <AnimatePresence>
+        {trimmingFile && (
+          <VideoTrimmer 
+            file={trimmingFile}
+            onConfirm={handleConfirmTrim}
+            onCancel={() => {
+              setSelectedFiles([trimmingFile])
+              setTrimmingFile(null)
+              setShowUploadModal(true)
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <footer className="mt-12 py-8 text-center text-gray-400 text-sm">
         <div className="flex items-center justify-center gap-1 mb-2">

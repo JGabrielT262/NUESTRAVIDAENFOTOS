@@ -4,13 +4,20 @@ import { useState, useRef, useEffect } from "react"
 import { Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export default function VideoPlayer({ src, className = "" }) {
+export default function VideoPlayer({ src, className = "", trim = null, ...props }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [progress, setProgress] = useState(0)
   const [showControls, setShowControls] = useState(true)
   const videoRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
+
+  // Apply trim on load
+  useEffect(() => {
+    if (trim && videoRef.current) {
+      videoRef.current.currentTime = trim.startTime
+    }
+  }, [trim, src])
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -32,13 +39,29 @@ export default function VideoPlayer({ src, className = "" }) {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      const currentProgress = (videoRef.current.currentTime / videoRef.current.duration) * 100
+      const current = videoRef.current.currentTime
+      const end = trim ? trim.endTime : videoRef.current.duration
+      const start = trim ? trim.startTime : 0
+      
+      const currentProgress = ((current - start) / (end - start)) * 100
       setProgress(currentProgress)
+
+      if (trim && current >= trim.endTime) {
+        if (props.onEnded) {
+          props.onEnded()
+        } else {
+          videoRef.current.pause()
+          setIsPlaying(false)
+          videoRef.current.currentTime = trim.startTime
+        }
+      }
     }
   }
 
   const handleSeek = (e) => {
-    const seekTime = (e.target.value / 100) * videoRef.current.duration
+    const start = trim ? trim.startTime : 0
+    const end = trim ? trim.endTime : videoRef.current.duration
+    const seekTime = start + (e.target.value / 100) * (end - start)
     videoRef.current.currentTime = seekTime
     setProgress(e.target.value)
   }
@@ -75,7 +98,10 @@ export default function VideoPlayer({ src, className = "" }) {
         onClick={togglePlay}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onEnded={props.onEnded}
         playsInline
+        muted={props.muted}
+        autoPlay={props.autoPlay}
       />
 
       <AnimatePresence>
