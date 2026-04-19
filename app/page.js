@@ -960,9 +960,9 @@ export default function Home() {
       console.error("Video generation error:", err);
       alert("No se pudo generar el vídeo. " + err.message);
       setIsGeneratingVideo(false);
-    } finally {
-      setVideoProgress(100);
     }
+  }
+
   const handleShareVideo = async () => {
     if (!generatedVideoBlob || !selectedImage) return;
     
