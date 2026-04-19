@@ -84,11 +84,18 @@ export default function VideoPlayer({ src, className = "" }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 flex flex-col justify-between p-4"
+            onClick={togglePlay}
+            className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 flex flex-col justify-between p-4 cursor-pointer"
           >
             {/* Top Bar */}
             <div className="flex justify-end p-2 text-white/80">
-               <button onClick={() => videoRef.current.currentTime = 0} className="hover:text-white transition-colors">
+               <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  videoRef.current.currentTime = 0;
+                }} 
+                className="hover:text-white transition-colors"
+              >
                   <RotateCcw className="w-5 h-5" />
                </button>
             </div>
@@ -124,18 +131,31 @@ export default function VideoPlayer({ src, className = "" }) {
                   max="100"
                   value={progress}
                   onChange={handleSeek}
+                  onClick={(e) => e.stopPropagation()}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
 
               <div className="flex items-center justify-between text-white">
                 <div className="flex items-center gap-4">
-                  <button onClick={togglePlay} className="hover:text-romantic-400 transition-colors">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePlay();
+                    }} 
+                    className="hover:text-romantic-400 transition-colors"
+                  >
                     {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                   </button>
                   
                   <div className="flex items-center gap-2">
-                    <button onClick={toggleMute} className="hover:text-romantic-400 transition-colors">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMute();
+                      }} 
+                      className="hover:text-romantic-400 transition-colors"
+                    >
                       {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
                     </button>
                   </div>
@@ -143,7 +163,10 @@ export default function VideoPlayer({ src, className = "" }) {
 
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={() => videoRef.current.requestFullscreen()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      videoRef.current.requestFullscreen();
+                    }}
                     className="hover:text-romantic-400 transition-colors"
                   >
                     <Maximize className="w-5 h-5" />
