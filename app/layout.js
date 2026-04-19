@@ -11,6 +11,10 @@ export const metadata = {
   title: 'Nuestra Vida Juntos ❤️',
   description: 'Un lugar especial para nuestros recuerdos',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

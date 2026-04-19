@@ -695,10 +695,10 @@ export default function Home() {
             animate={{ x: 0, opacity: 1 }}
             className="flex items-center gap-2"
           >
-            <div className="bg-romantic-500 p-2 rounded-lg">
-              <Heart className="text-white fill-white w-5 h-5" />
+            <div className="bg-romantic-100 p-1 rounded-xl w-10 h-10 overflow-hidden shadow-inner">
+               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-xl font-bold text-gray-800 hidden sm:block">Nuestra Vida Juntos ❤️</h1>
+            <h1 className="text-xl font-black text-gray-800 hidden sm:block tracking-tighter">Nuestra Vida Juntos</h1>
             {isAdmin && (
               <span className="bg-romantic-100 text-romantic-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-romantic-200 ml-2">
                 ADMIN
@@ -1014,20 +1014,35 @@ export default function Home() {
                   )}
 
                   {isAdmin && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        eliminarImagen(img.id, img.url);
-                      }}
-                      disabled={deletingId === img.id}
-                      className="absolute top-4 right-4 bg-white/90 hover:bg-red-50 text-red-500 p-2 rounded-full shadow-sm transition-all"
-                    >
-                      {deletingId === img.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </button>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                       <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedImage(img);
+                          setIsEditing(true);
+                          setEditForm({ fecha: img.fecha, ubicacion: img.ubicacion, nota: img.nota });
+                        }}
+                        className="bg-white/90 hover:bg-romantic-50 text-romantic-500 p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                        title="Editar Recuerdo"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          eliminarImagen(img.id, img.url);
+                        }}
+                        disabled={deletingId === img.id}
+                        className="bg-white/90 hover:bg-red-50 text-red-500 p-2.5 rounded-full shadow-lg transition-all active:scale-90"
+                        title="Eliminar Recuerdo"
+                      >
+                        {deletingId === img.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
 
