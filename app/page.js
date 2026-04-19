@@ -2068,6 +2068,20 @@ export default function Home() {
                           </p>
                         </div>
                       </div>
+
+                      {selectedImage.metadata?.audio && (
+                        <div className="mb-8 flex items-center gap-3">
+                          <div className="bg-romantic-100/50 p-2.5 rounded-xl">
+                            <Music className="w-5 h-5 text-romantic-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Nuestra Música</p>
+                            <p className="text-sm font-bold text-gray-700 italic">
+                              🎵 {selectedImage.metadata.audio.name || "Nuestra canción especial"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="space-y-6 mb-8">
