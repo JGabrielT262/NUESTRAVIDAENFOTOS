@@ -2022,7 +2022,7 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-lg w-full max-h-[95vh] bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+              className="relative max-w-lg lg:max-w-6xl w-full max-h-[95vh] lg:h-[85vh] bg-white rounded-[2rem] overflow-hidden shadow-2xl flex flex-col transition-all duration-300"
             >
               <button 
                 onClick={() => setSelectedImage(null)}
@@ -2030,22 +2030,22 @@ export default function Home() {
               >
                 <X className="w-6 h-6" />
               </button>
-              <div className="flex-1 overflow-y-auto pt-0 scrollbar-hide">
-                {/* Main Media - Full Width Scrollable Container */}
-                <div className="w-full bg-black flex items-center justify-center min-h-[300px]">
+              <div className="flex-1 overflow-y-auto pt-0 scrollbar-hide lg:flex lg:flex-row lg:overflow-hidden">
+                {/* Main Media - Side by side on desktop */}
+                <div className="w-full lg:w-[55%] bg-black flex items-center justify-center min-h-[300px] lg:min-h-0 lg:h-full overflow-hidden">
                   {isVideo(selectedImage.url) ? (
                     <VideoPlayer 
                       src={selectedImage.url} 
-                      className="w-full h-auto block" 
+                      className="w-full h-auto lg:h-full lg:w-full block" 
                       trim={selectedImage.metadata?.trim}
                     />
                   ) : (
-                    <img src={selectedImage.url} className="w-full h-auto block" alt="Recuerdo" />
+                    <img src={selectedImage.url} className="w-full h-auto lg:h-full lg:w-full lg:object-contain block" alt="Recuerdo" />
                   )}
                 </div>
 
                 {/* Info Section */}
-                <div className="p-6 sm:p-8 flex flex-col border-t border-romantic-50 bg-white">
+                <div className="p-6 sm:p-8 lg:p-12 flex flex-col border-t lg:border-t-0 lg:border-l border-romantic-50 bg-white lg:w-[45%] lg:overflow-y-auto scrollbar-hide">
                   {!isEditing ? (
                     <>
                       <div className="grid grid-cols-2 gap-4 mb-6">
