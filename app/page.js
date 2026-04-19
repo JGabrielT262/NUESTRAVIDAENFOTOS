@@ -567,21 +567,9 @@ export default function Home() {
     if (!isAdmin || !selectedImage) return
     setUpdating(true)
     try {
-      const { error } = await supabase
-        .from("fotos")
-        .update({ 
-          fecha: editForm.fecha,
-          ubicacion: editForm.ubicacion,
-          nota: editForm.nota,
-          metadata: selectedImage.metadata // preserve other metadata
-        })
-        .eq('id', selectedImage.id)
-
-      if (error) throw error
-
       let finalMetadata = { ...(selectedImage.metadata || {}) }
       
-      // Handle new audio if selected during edit
+      // 1. Handle new audio upload if selected
       if (selectedAudioFile) {
         const audioExt = selectedAudioFile.name.split('.').pop()
         const audioName = `musica/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${audioExt}`
@@ -599,15 +587,28 @@ export default function Home() {
         finalMetadata.audio = {
           url: audioUrl,
           name: selectedAudioFile.name.replace(/\.[^/.]+$/, ""), // Clean extension
+          startTime: audioTrimData?.startTime || 0
+        }
+      } else if (audioTrimData && selectedImage.metadata?.audio) {
+        // Just updating the trim of existing audio
+        finalMetadata.audio = {
+          ...selectedImage.metadata.audio,
           startTime: audioTrimData.startTime
         }
-
-        // Update DB with the new metadata including audio
-        await supabase
-          .from("fotos")
-          .update({ metadata: finalMetadata })
-          .eq('id', selectedImage.id)
       }
+
+      // 2. Perform the database update
+      const { error } = await supabase
+        .from("fotos")
+        .update({ 
+          fecha: editForm.fecha,
+          ubicacion: editForm.ubicacion,
+          nota: editForm.nota,
+          metadata: finalMetadata
+        })
+        .eq('id', selectedImage.id)
+
+      if (error) throw error
 
       setImagenes(imagenes.map(img => img.id === selectedImage.id ? { ...img, ...editForm, metadata: finalMetadata } : img))
       setSelectedImage({ ...selectedImage, ...editForm, metadata: finalMetadata })
@@ -618,7 +619,7 @@ export default function Home() {
       confetti({
         particleCount: 50,
         spread: 30,
-        origin: { y: 0.9 },
+        origin: { y: 0.8 },
         colors: ['#ff7da3', '#f84a7e']
       })
     } catch (err) {
@@ -1431,8 +1432,8 @@ export default function Home() {
                       </div>
 
                       {img.metadata?.audio && (
-                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
-                          <Music className="w-3.5 h-3.5 text-romantic-500 animate-bounce" />
+                        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-md z-10">
+                          <Music className="w-4 h-4 text-romantic-500 animate-pulse" />
                         </div>
                       )}
 
