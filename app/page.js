@@ -30,7 +30,8 @@ import {
   Play,
   Pause,
   Volume2,
-  VolumeX
+  VolumeX,
+  Share2
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
@@ -608,6 +609,34 @@ export default function Home() {
     }
   }
 
+  async function compartirRecuerdo() {
+    if (!selectedImage) return;
+    
+    const text = `🎨 ✨ *NUESTRA VIDA EN FOTOS* ✨ 🎨
+    
+📅 *Fecha:* ${new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+📍 *Lugar:* ${selectedImage.ubicacion || 'Nuestro corazón'}
+✍️ *Nota:* "${selectedImage.nota || 'Te amo'}"
+${selectedImage.metadata?.audio ? '🎵 _Incluye nuestra canción especial_' : ''}
+
+🔗 Mira este momento aquí: ${window.location.href}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Nuestra Vida Juntos ❤️',
+          text: text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log("Error sharing:", err);
+      }
+    } else {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  }
+
   if (!isClient) return null
 
   if (!authorized) {
@@ -1026,21 +1055,6 @@ export default function Home() {
                         title="Editar Recuerdo"
                       >
                         <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          eliminarImagen(img.id, img.url);
-                        }}
-                        disabled={deletingId === img.id}
-                        className="bg-white/90 hover:bg-red-50 text-red-500 p-2.5 rounded-full shadow-lg transition-all active:scale-90"
-                        title="Eliminar Recuerdo"
-                      >
-                        {deletingId === img.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
                       </button>
                     </div>
                   )}
@@ -1635,7 +1649,8 @@ export default function Home() {
                         />
                       </div>
 
-                      <div className="pt-2">
+                      <div className="pt-2 p-4 bg-romantic-50/50 rounded-2xl border border-dashed border-romantic-200">
+                        <p className="text-[10px] font-bold uppercase text-romantic-400 mb-3 ml-1">Música de Fondo</p>
                         <input 
                           type="file" 
                           accept="audio/*, .mp3, .wav, .m4a, .aac, .ogg" 
@@ -1651,21 +1666,24 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => musicInputRef.current.click()}
-                          className={`w-full py-3 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${
+                          className={`w-full py-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${
                             (selectedAudioFile || selectedImage.metadata?.audio)
-                               ? 'border-romantic-200 bg-romantic-50 text-romantic-600' 
-                               : 'border-gray-200 text-gray-400 hover:border-romantic-200 hover:text-romantic-500'
+                               ? 'border-romantic-300 bg-white text-romantic-600 shadow-sm' 
+                               : 'border-gray-200 text-gray-400 hover:border-romantic-200 hover:text-romantic-500 bg-white'
                           }`}
                         >
-                          <Music className="w-4 h-4" />
-                          <span className="text-xs font-bold uppercase tracking-tight">
+                          <Music className="w-5 h-5" />
+                          <span className="text-sm font-bold uppercase tracking-tight">
                             {selectedImage.metadata?.audio ? "Cambiar Música" : "Añadir Música"}
                           </span>
                         </button>
                         {(selectedAudioFile || selectedImage.metadata?.audio) && (
-                          <p className="text-[10px] text-center mt-2 text-romantic-400 font-bold italic">
-                            🎵 {selectedAudioFile ? selectedAudioFile.name : "Música actual guardada"}
-                          </p>
+                          <div className="flex items-center justify-center gap-2 mt-3 text-romantic-500">
+                             <Music className="w-3 h-3 animate-bounce" />
+                             <p className="text-[10px] font-bold italic">
+                              {selectedAudioFile ? selectedAudioFile.name : "Música actual guardada"}
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1678,26 +1696,14 @@ export default function Home() {
                           <>
                             <button
                               onClick={() => setIsEditing(true)}
-                              className="py-4 rounded-2xl bg-romantic-50 text-romantic-500 text-xs font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2"
+                              className="py-4 rounded-2xl bg-romantic-50 text-romantic-500 text-xs font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2 w-full col-span-2 shadow-sm"
                             >
                               <Pencil className="w-4 h-4" />
-                              Editar Texto
-                            </button>
-                            <button
-                              onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
-                              disabled={deletingId === selectedImage.id}
-                              className="py-4 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                            >
-                              {deletingId === selectedImage.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                              Eliminar
+                              Editar Texto / Música
                             </button>
                           </>
                         ) : (
-                          <>
+                          <div className="flex flex-col gap-2 w-full col-span-2">
                             <button
                               onClick={actualizarImagen}
                               disabled={updating}
@@ -1710,14 +1716,28 @@ export default function Home() {
                               )}
                               Guardar cambios
                             </button>
+                            
+                            <button
+                              onClick={() => eliminarImagen(selectedImage.id, selectedImage.url)}
+                              disabled={deletingId === selectedImage.id}
+                              className="py-3 rounded-2xl bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2 border border-red-100"
+                            >
+                              {deletingId === selectedImage.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                              Eliminar Recuerdo Permanemente
+                            </button>
+
                             <button
                               onClick={() => setIsEditing(false)}
                               disabled={updating}
-                              className="py-4 rounded-2xl bg-gray-100 text-gray-500 text-xs font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                              className="py-3 rounded-2xl bg-gray-100 text-gray-400 text-[10px] font-bold hover:bg-gray-200 transition-all"
                             >
-                              Cancelar
+                              Cancelar edición
                             </button>
-                          </>
+                          </div>
                         )}
                       </div>
                     )}
@@ -1729,19 +1749,29 @@ export default function Home() {
                           <span className="text-romantic-600 font-bold text-lg tracking-tight">Para siempre</span>
                         </div>
                         
-                        <button
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = selectedImage.url;
-                            const ext = isVideo(selectedImage.url) ? 'mp4' : 'jpg';
-                            link.download = `recuerdo-${selectedImage.fecha}.${ext}`;
-                            link.click();
-                          }}
-                          className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-romantic-50 hover:text-romantic-500 transition-all flex items-center justify-center gap-2 border border-gray-100"
-                        >
-                          <Download className="w-5 h-5" />
-                          <span>Descargar {isVideo(selectedImage.url) ? 'video' : 'foto'} original</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                          <button
+                            onClick={compartirRecuerdo}
+                            className="py-4 rounded-2xl bg-romantic-50 text-romantic-600 text-sm font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2 border border-romantic-100 shadow-sm"
+                          >
+                            <Share2 className="w-5 h-5" />
+                            <span>Compartir</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = selectedImage.url;
+                              const ext = isVideo(selectedImage.url) ? 'mp4' : 'jpg';
+                              link.download = `recuerdo-${selectedImage.fecha}.${ext}`;
+                              link.click();
+                            }}
+                            className="py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
+                          >
+                            <Download className="w-5 h-5" />
+                            <span>Descargar</span>
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>
