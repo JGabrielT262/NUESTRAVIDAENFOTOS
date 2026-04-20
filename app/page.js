@@ -789,7 +789,8 @@ export default function Home() {
       const dia = fechaObj.getDate();
       const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' });
       const anio = fechaObj.getFullYear();
-      ctx.fillText(`${dia} DE ${mes.toUpperCase()}, ${anio}`, size - margin, infoY + 45);
+      const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      ctx.fillText(`${dia} DE ${mes.toUpperCase()}, ${anio} • ${hora}`, size - margin, infoY + 45);
 
       // Decoration: Corners or lines like the reference
       ctx.strokeStyle = '#f84a7e';
