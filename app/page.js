@@ -1493,23 +1493,23 @@ export default function Home() {
           </>
         ) : (
           <div className="space-y-8 max-w-4xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-[40px] border border-white/40 shadow-xl mb-12">
-              <div className="text-center md:text-left">
-                <h2 className="text-3xl font-black text-gray-800 flex items-center justify-center md:justify-start gap-3">
-                  Diario de Nosotros <MessageCircleHeart className="text-romantic-500" />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 bg-white/60 backdrop-blur-md p-6 sm:p-8 rounded-[40px] border border-white/40 shadow-sm transition-all hover:shadow-md">
+              <div className="text-center sm:text-left">
+                <h2 className="text-3xl sm:text-4xl font-black text-gray-800 flex items-center justify-center sm:justify-start gap-4">
+                  Diario de Nosotros <MessageCircleHeart className="w-8 h-8 text-romantic-400 animate-pulse" />
                 </h2>
-                <p className="text-gray-500 mt-2">Pequeñas notas de amor, pensamientos o momentos que queremos recordar juntos.</p>
+                <p className="text-gray-500 mt-2 text-sm sm:text-base">Pequeñas notas de amor, pensamientos o momentos que queremos recordar juntos.</p>
               </div>
               <button
                 onClick={() => setShowDiarioModal(true)}
-                className="bg-romantic-500 text-white px-8 py-5 rounded-[25px] font-black text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all flex items-center gap-2 group"
+                className="bg-romantic-500 text-white px-6 py-4 rounded-[22px] font-black text-xs sm:text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all flex items-center gap-2 group whitespace-nowrap"
               >
-                <PenLine className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                ESCRIBIR NUEVA NOTA
+                <PenLine className="w-4 h-4 sm:w-5 h-5 group-hover:rotate-12 transition-transform" />
+                ESCRIBIR NOTA
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <AnimatePresence mode="popLayout">
                 {diario.map((nota, idx) => (
                   <motion.div
@@ -1518,33 +1518,74 @@ export default function Home() {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="bg-white p-8 rounded-[35px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-50 transition-all cursor-default"
+                    className="bg-white p-6 rounded-[28px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-100/30 transition-all cursor-default flex flex-col justify-between"
                   >
-                    <div className="absolute top-6 right-8 text-romantic-100 group-hover:text-romantic-200 transition-colors">
-                      <Sparkles className="w-8 h-8 opacity-40" />
-                    </div>
-                    
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-full bg-romantic-100 flex items-center justify-center text-romantic-500 font-bold text-lg">
-                        {nota.autor[0]?.toUpperCase() || '❤'}
+                    <div>
+                      <div className="absolute top-4 right-6 text-romantic-100 group-hover:text-romantic-200 transition-colors">
+                        <Sparkles className="w-6 h-6 opacity-40" />
                       </div>
-                      <div>
-                        <p className="text-gray-800 font-black text-sm leading-none">{nota.autor.toUpperCase()}</p>
-                        <p className="text-romantic-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
-                          {new Date(nota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-full bg-romantic-100 flex items-center justify-center text-romantic-500 font-bold text-base">
+                          {nota.autor[0]?.toUpperCase() || '❤'}
+                        </div>
+                        <div>
+                          <p className="text-gray-800 font-black text-xs leading-none">{nota.autor.toUpperCase()}</p>
+                          <div className="flex items-center gap-1.5 text-romantic-400 text-[9px] font-bold mt-1 uppercase tracking-wider">
+                            <span>{new Date(nota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                            <span className="opacity-30">•</span>
+                            <div className="flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{new Date(nota.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute -left-3 top-0 w-1 h-full bg-romantic-100/50 rounded-full" />
+                        <p className="text-gray-600 leading-relaxed italic text-base pr-2 line-clamp-6">
+                          "{nota.contenido}"
                         </p>
                       </div>
                     </div>
 
-                    <div className="relative">
-                      <div className="absolute -left-4 top-0 w-1 h-full bg-romantic-100 rounded-full" />
-                      <p className="text-gray-600 leading-relaxed italic text-lg pr-4">
-                        "{nota.contenido}"
-                      </p>
-                    </div>
-
-                    <div className="mt-8 flex justify-end">
-                       <Heart className="w-5 h-5 text-romantic-200 fill-romantic-50 group-hover:scale-125 group-hover:text-romantic-400 transition-all" />
+                    <div className="mt-5 pt-4 border-t border-gray-50 flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                          <button 
+                            className="w-8 h-8 rounded-full bg-romantic-50 flex items-center justify-center text-romantic-400 hover:bg-romantic-500 hover:text-white transition-all active:scale-90"
+                            onClick={(e) => {
+                              confetti({
+                                particleCount: 20,
+                                spread: 40,
+                                origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
+                                colors: ['#f84a7e', '#ffb6c1']
+                              })
+                            }}
+                          >
+                            <Heart className="w-4 h-4 fill-current" />
+                          </button>
+                          <div className="flex -space-x-1">
+                            {['😍', '✨', '🫂'].map((emoji, i) => (
+                              <button 
+                                key={i}
+                                className="w-7 h-7 rounded-full bg-white border border-gray-50 flex items-center justify-center text-sm shadow-sm hover:z-10 hover:scale-110 transition-transform active:scale-90"
+                                onClick={() => {
+                                   const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+                                   audio.volume = 0.2;
+                                   audio.play().catch(() => {});
+                                }}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                         <div className="w-1.5 h-1.5 rounded-full bg-romantic-300 animate-bounce" />
+                         <div className="w-1.5 h-1.5 rounded-full bg-romantic-300 animate-bounce [animation-delay:0.2s]" />
+                         <div className="w-1.5 h-1.5 rounded-full bg-romantic-300 animate-bounce [animation-delay:0.4s]" />
+                       </div>
                     </div>
                   </motion.div>
                 ))}
