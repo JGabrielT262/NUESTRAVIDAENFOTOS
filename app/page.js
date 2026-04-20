@@ -300,6 +300,37 @@ export default function Home() {
     }
   }, [selectedStoryIndex])
 
+  // Bloquear scroll cuando hay un modal abierto
+  useEffect(() => {
+    const isModalOpen = selectedImage !== null || 
+                       selectedStoryIndex !== null || 
+                       showDayStoriesModal || 
+                       showUploadModal || 
+                       showDiarioModal || 
+                       showMusicModal ||
+                       trimmingFile !== null ||
+                       isGeneratingVideo;
+    
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
+    };
+  }, [selectedImage, selectedStoryIndex, showDayStoriesModal, showUploadModal, showDiarioModal, showMusicModal, trimmingFile, isGeneratingVideo]);
+
   function verificarClave(clave) {
     if (clave === ADMIN_KEY) {
       setAuthorized(true)
