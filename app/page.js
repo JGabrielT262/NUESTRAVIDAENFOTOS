@@ -80,6 +80,7 @@ export default function Home() {
   const [showDiarioModal, setShowDiarioModal] = useState(false)
   const [notaData, setNotaData] = useState({ autor: '', contenido: '' })
   const [enviandoNota, setEnviandoNota] = useState(false)
+  const [selectedNota, setSelectedNota] = useState(null)
   
   const audioRef = useRef(null)
   const musicInputRef = useRef(null)
@@ -304,6 +305,7 @@ export default function Home() {
   useEffect(() => {
     const isModalOpen = selectedImage !== null || 
                        selectedStoryIndex !== null || 
+                       selectedNota !== null ||
                        showDayStoriesModal || 
                        showUploadModal || 
                        showDiarioModal || 
@@ -691,6 +693,141 @@ export default function Home() {
       alert("Error al eliminar: " + err.message)
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function compartirNota(notaParaCompartir) {
+    const nota = notaParaCompartir || selectedNota;
+    if (!nota) return;
+
+    setIsGeneratingVideo(true);
+    setVideoProgress(0);
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const width = 1080;
+      const height = 1920; 
+      canvas.width = width;
+      canvas.height = height;
+
+      // Background
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#fff5f7');
+      gradient.addColorStop(1, '#ffffff');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Card
+      const cardPadding = 60;
+      const cardY = 120;
+      const cardWidth = width - (cardPadding * 2);
+      const cardHeight = height - (cardY * 2);
+      
+      ctx.shadowColor = 'rgba(248, 74, 126, 0.15)';
+      ctx.shadowBlur = 40;
+      ctx.fillStyle = '#ffffff';
+      
+      const radius = 60;
+      ctx.beginPath();
+      ctx.moveTo(cardPadding + radius, cardY);
+      ctx.arcTo(cardPadding + cardWidth, cardY, cardPadding + cardWidth, cardY + cardHeight, radius);
+      ctx.arcTo(cardPadding + cardWidth, cardY + cardHeight, cardPadding, cardY + cardHeight, radius);
+      ctx.arcTo(cardPadding, cardY + cardHeight, cardPadding, cardY, radius);
+      ctx.arcTo(cardPadding, cardY, cardPadding + cardWidth, cardY, radius);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Large Decoration Heart in background of the card
+      ctx.save();
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = '800px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('❤', width/2, height/2 + 200);
+      ctx.restore();
+
+      const textStart = cardY + 150;
+      const fechaObj = new Date(nota.created_at);
+      const dia = fechaObj.getDate();
+      const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' });
+      const anio = fechaObj.getFullYear();
+      const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+      // Header: Author Initial Circle
+      ctx.fillStyle = '#f84a7e';
+      ctx.beginPath();
+      ctx.arc(cardPadding + 100, textStart + 50, 60, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 50px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(nota.autor[0].toUpperCase(), cardPadding + 100, textStart + 70);
+
+      // Author Name & Time
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 45px Arial';
+      ctx.fillText(nota.autor.toUpperCase(), cardPadding + 180, textStart + 35);
+      
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = 'bold 30px Arial';
+      ctx.fillText(`${dia} ${mes.toUpperCase()} ${anio} • ${hora}`, cardPadding + 180, textStart + 85);
+
+      // Quote / Note Content
+      ctx.fillStyle = '#4b5563';
+      ctx.font = 'italic 55px Arial';
+      const words = nota.contenido.split(' ');
+      let line = '';
+      let lineY = textStart + 250;
+      const maxWidth = cardWidth - 160;
+      
+      for(let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line, cardPadding + 100, lineY);
+          line = words[n] + ' ';
+          lineY += 80;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, cardPadding + 100, lineY);
+
+      // Bottom Watermark
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = 'bold 35px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText("DIARIO DE NUESTRA VIDA ❤", width/2, cardY + cardHeight - 100);
+
+      // Video recording (static video)
+      const stream = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        setGeneratedVideoBlob(blob);
+      };
+
+      recorder.start();
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        setVideoProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          recorder.stop();
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error(err);
+      alert("Error al generar el video de la nota");
+      setIsGeneratingVideo(false);
     }
   }
 
@@ -1549,7 +1686,8 @@ export default function Home() {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="bg-white p-6 rounded-[28px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-100/30 transition-all cursor-default flex flex-col justify-between"
+                    className="bg-white p-6 rounded-[28px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-100/30 transition-all cursor-pointer flex flex-col justify-between"
+                    onClick={() => setSelectedNota(nota)}
                   >
                     <div>
                       <div className="absolute top-4 right-6 text-romantic-100 group-hover:text-romantic-200 transition-colors">
@@ -1595,6 +1733,15 @@ export default function Home() {
                             }}
                           >
                             <Heart className="w-4 h-4 fill-current" />
+                          </button>
+                          <button 
+                            className="w-8 h-8 rounded-full bg-romantic-50 flex items-center justify-center text-romantic-400 hover:bg-romantic-500 hover:text-white transition-all active:scale-90"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              compartirNota(nota);
+                            }}
+                          >
+                            <Share2 className="w-4 h-4" />
                           </button>
                           <div className="flex -space-x-1">
                             {['😍', '✨', '🫂'].map((emoji, i) => (
@@ -2597,6 +2744,78 @@ export default function Home() {
                   )}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Selected Note Viewer Modal */}
+      <AnimatePresence>
+        {selectedNota && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedNota(null)}
+              className="absolute inset-0 bg-romantic-900/40 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="bg-gradient-to-r from-romantic-500 to-romantic-600 px-8 py-8 text-white flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl">
+                    {selectedNota.autor[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight">{selectedNota.autor.toUpperCase()}</h3>
+                    <p className="text-romantic-100 text-xs font-bold uppercase tracking-widest">
+                       {new Date(selectedNota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} • {new Date(selectedNota.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedNota(null)}
+                  className="bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-10 overflow-y-auto custom-scrollbar">
+                <div className="relative">
+                  <Sparkles className="absolute -top-6 -left-6 w-12 h-12 text-romantic-100/50" />
+                  <p className="text-gray-700 font-serif text-2xl sm:text-3xl leading-relaxed italic pr-6 whitespace-pre-wrap">
+                    "{selectedNota.contenido}"
+                  </p>
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-romantic-50 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                     <div className="flex -space-x-2">
+                        {['😍', '✨', '🫂', '❤'].map((emoji, i) => (
+                          <div key={i} className="w-10 h-10 rounded-full bg-white border-2 border-romantic-50 flex items-center justify-center text-xl shadow-sm">
+                            {emoji}
+                          </div>
+                        ))}
+                     </div>
+                     <p className="text-gray-400 text-sm font-medium italic">Guardado para siempre...</p>
+                  </div>
+
+                  <button 
+                    onClick={() => compartirNota(selectedNota)}
+                    className="bg-romantic-500 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all flex items-center gap-2 group"
+                  >
+                    <Share2 className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                    <span>COMPARTIR MOMENTO</span>
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}
