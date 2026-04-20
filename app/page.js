@@ -700,8 +700,9 @@ export default function Home() {
     const nota = notaParaCompartir || selectedNota;
     if (!nota) return;
 
+    // Aunque sea imagen, mostramos el overlay un momento para que se sienta que está procesando
     setIsGeneratingVideo(true);
-    setVideoProgress(0);
+    setVideoProgress(20);
 
     try {
       const canvas = document.createElement('canvas');
@@ -710,6 +711,8 @@ export default function Home() {
       const height = 1920; 
       canvas.width = width;
       canvas.height = height;
+
+      setVideoProgress(50);
 
       // Background
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
@@ -738,7 +741,7 @@ export default function Home() {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Large Decoration Heart in background of the card
+      // Decoration Heart
       ctx.save();
       ctx.globalAlpha = 0.05;
       ctx.fillStyle = '#f84a7e';
@@ -754,7 +757,7 @@ export default function Home() {
       const anio = fechaObj.getFullYear();
       const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
-      // Header: Author Initial Circle
+      // Header
       ctx.fillStyle = '#f84a7e';
       ctx.beginPath();
       ctx.arc(cardPadding + 100, textStart + 50, 60, 0, Math.PI * 2);
@@ -765,7 +768,6 @@ export default function Home() {
       ctx.textAlign = 'center';
       ctx.fillText(nota.autor[0].toUpperCase(), cardPadding + 100, textStart + 70);
 
-      // Author Name & Time
       ctx.textAlign = 'left';
       ctx.fillStyle = '#333333';
       ctx.font = 'bold 45px Arial';
@@ -775,9 +777,9 @@ export default function Home() {
       ctx.font = 'bold 30px Arial';
       ctx.fillText(`${dia} ${mes.toUpperCase()} ${anio} • ${hora}`, cardPadding + 180, textStart + 85);
 
-      // Quote / Note Content
+      // Quote Content
       ctx.fillStyle = '#4b5563';
-      ctx.font = 'italic 55px Arial';
+      ctx.font = 'italic 48px Arial'; // Un poco más pequeño también en la imagen
       const words = nota.contenido.split(' ');
       let line = '';
       let lineY = textStart + 250;
@@ -789,44 +791,46 @@ export default function Home() {
         if (metrics.width > maxWidth && n > 0) {
           ctx.fillText(line, cardPadding + 100, lineY);
           line = words[n] + ' ';
-          lineY += 80;
+          lineY += 75;
         } else {
           line = testLine;
         }
       }
       ctx.fillText(line, cardPadding + 100, lineY);
 
-      // Bottom Watermark
       ctx.fillStyle = '#f84a7e';
       ctx.font = 'bold 35px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText("DIARIO DE NUESTRA VIDA ❤", width/2, cardY + cardHeight - 100);
+      ctx.fillText("DIARIO DE NUESTRA VIDA ❤️", width/2, cardY + cardHeight - 100);
 
-      // Video recording (static video)
-      const stream = canvas.captureStream(30);
-      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        setGeneratedVideoBlob(blob);
-      };
+      setVideoProgress(100);
 
-      recorder.start();
-      
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 5;
-        setVideoProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          recorder.stop();
+      // Convert to blob and share/download
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], `nota-${dia}-${mes}.png`, { type: 'image/png' });
+        
+        try {
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Nota de Amor ❤️',
+              text: 'Una pequeña nota de nuestra historia...'
+            });
+          } else {
+            saveAs(blob, `nota-${dia}-${mes}.png`);
+          }
+        } catch (err) {
+          console.error("Error sharing image:", err);
+          saveAs(blob, `nota-${dia}-${mes}.png`);
+        } finally {
+          setIsGeneratingVideo(false);
+          setVideoProgress(0);
         }
-      }, 100);
+      }, 'image/png');
 
     } catch (err) {
       console.error(err);
-      alert("Error al generar el video de la nota");
+      alert("Error al generar la imagen de la nota");
       setIsGeneratingVideo(false);
     }
   }
@@ -2765,17 +2769,17 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative bg-white rounded-[30px] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
             >
-              <div className="bg-gradient-to-r from-romantic-500 to-romantic-600 px-8 py-8 text-white flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl">
+              <div className="bg-gradient-to-r from-romantic-500 to-romantic-600 px-6 py-5 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-lg">
                     {selectedNota.autor[0].toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-xl font-black tracking-tight">{selectedNota.autor.toUpperCase()}</h3>
-                    <p className="text-romantic-100 text-xs font-bold uppercase tracking-widest">
-                       {new Date(selectedNota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} • {new Date(selectedNota.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    <h3 className="text-md font-black tracking-tight">{selectedNota.autor.toUpperCase()}</h3>
+                    <p className="text-romantic-100 text-[10px] font-bold uppercase tracking-widest">
+                       {new Date(selectedNota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
@@ -2787,10 +2791,10 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="p-10 overflow-y-auto custom-scrollbar">
+              <div className="p-6 sm:p-8 lg:p-10 overflow-y-auto custom-scrollbar">
                 <div className="relative">
                   <Sparkles className="absolute -top-6 -left-6 w-12 h-12 text-romantic-100/50" />
-                  <p className="text-gray-700 font-serif text-2xl sm:text-3xl leading-relaxed italic pr-6 whitespace-pre-wrap">
+                  <p className="text-gray-700 font-serif text-lg sm:text-xl leading-relaxed italic pr-6 whitespace-pre-wrap">
                     "{selectedNota.contenido}"
                   </p>
                 </div>
