@@ -81,6 +81,7 @@ export default function Home() {
   const [notaData, setNotaData] = useState({ autor: '', contenido: '' })
   const [enviandoNota, setEnviandoNota] = useState(false)
   const [selectedNota, setSelectedNota] = useState(null)
+  const [sharingType, setSharingType] = useState('video') // 'video' o 'image'
   
   const audioRef = useRef(null)
   const musicInputRef = useRef(null)
@@ -701,6 +702,7 @@ export default function Home() {
     if (!nota) return;
 
     // Aunque sea imagen, mostramos el overlay un momento para que se sienta que está procesando
+    setSharingType('image');
     setIsGeneratingVideo(true);
     setVideoProgress(20);
 
@@ -864,6 +866,7 @@ export default function Home() {
 
   async function compartirRecuerdo() {
     if (!selectedImage) return;
+    setSharingType('video');
     setIsGeneratingVideo(true);
     setVideoProgress(0);
 
@@ -2601,9 +2604,13 @@ export default function Home() {
                       </motion.div>
                     </div>
                     
-                    <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">Creando tu Video...</h3>
+                    <h3 className="text-2xl font-black text-gray-800 mb-2 leading-tight">
+                      {sharingType === 'video' ? 'Creando tu Video...' : 'Preparando tu Imagen...'}
+                    </h3>
                     <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                      Estamos fusionando tu foto con la música para crear algo mágico. 🥺✨
+                      {sharingType === 'video' 
+                        ? 'Estamos fusionando tu foto con la música para crear algo mágico. 🥺✨' 
+                        : 'Estamos dando los últimos retoques a tu nota de amor. ✨'}
                     </p>
                     
                     <div className="space-y-2">
