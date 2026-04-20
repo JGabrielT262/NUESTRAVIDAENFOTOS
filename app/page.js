@@ -2019,8 +2019,8 @@ export default function Home() {
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
 
-            {/* Botones de Navegación */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-12 pointer-events-none z-[100]">
+            {/* Botones de Navegación - Ocultos en móvil por petición del usuario */}
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 hidden sm:flex justify-between px-4 sm:px-12 pointer-events-none z-[100]">
               {imagenes.findIndex(img => img.id === selectedImage.id) > 0 ? (
                 <button 
                   onClick={(e) => {
@@ -2065,7 +2065,7 @@ export default function Home() {
               </button>
               <div className="flex-1 overflow-y-auto pt-0 scrollbar-hide lg:flex lg:flex-row lg:overflow-hidden">
                 {/* Main Media - Side by side on desktop */}
-                <div className="w-full lg:w-[55%] bg-black flex items-center justify-center min-h-[300px] lg:min-h-0 lg:h-full overflow-hidden">
+                <div className="w-full lg:w-[55%] bg-black flex items-center justify-center min-h-[240px] lg:min-h-0 lg:h-full overflow-hidden">
                   {isVideo(selectedImage.url) ? (
                     <VideoPlayer 
                       src={selectedImage.url} 
@@ -2078,53 +2078,53 @@ export default function Home() {
                 </div>
 
                 {/* Info Section */}
-                <div className="p-6 sm:p-8 lg:p-12 flex flex-col border-t lg:border-t-0 lg:border-l border-romantic-50 bg-white lg:w-[45%] lg:overflow-y-auto scrollbar-hide">
+                <div className="p-5 sm:p-8 lg:p-12 flex flex-col border-t lg:border-t-0 lg:border-l border-romantic-50 bg-white lg:w-[45%] lg:overflow-y-auto scrollbar-hide">
                   {!isEditing ? (
                     <>
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="flex items-center gap-3 text-romantic-500">
-                          <div className="bg-romantic-50 p-2 rounded-xl">
-                            <Calendar className="w-5 h-5" />
+                      <div className="grid grid-cols-2 gap-3 mb-5">
+                        <div className="flex items-center gap-2 text-romantic-500">
+                          <div className="bg-romantic-50 p-1.5 rounded-lg">
+                            <Calendar className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
-                            <p className="text-sm font-bold text-gray-800">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Fecha</p>
+                            <p className="text-xs font-bold text-gray-800">
                               {new Date(selectedImage.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
 
                         {selectedImage.ubicacion && (
-                          <div className="flex items-center gap-3 text-romantic-500">
-                            <div className="bg-romantic-50 p-2 rounded-xl">
-                              <MapPin className="w-5 h-5" />
+                          <div className="flex items-center gap-2 text-romantic-500">
+                            <div className="bg-romantic-50 p-1.5 rounded-lg">
+                              <MapPin className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
-                              <p className="text-sm font-bold text-gray-800 truncate">{selectedImage.ubicacion}</p>
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Lugar</p>
+                              <p className="text-xs font-bold text-gray-800 truncate max-w-[100px] sm:max-w-none">{selectedImage.ubicacion}</p>
                             </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="mb-8">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300 mb-3 ml-1">Nota de Amor</p>
-                        <div className="bg-romantic-50/50 p-5 rounded-2xl border border-romantic-100 italic relative">
-                          <MessageSquare className="absolute -top-2 -left-2 w-5 h-5 text-romantic-200" />
-                          <p className="text-gray-600 text-sm leading-relaxed">
+                      <div className="mb-6">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300 mb-2 ml-1">Nota de Amor</p>
+                        <div className="bg-romantic-50/50 p-4 rounded-xl border border-romantic-100 italic relative">
+                          <MessageSquare className="absolute -top-1.5 -left-1.5 w-4 h-4 text-romantic-200" />
+                          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
                             "{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}"
                           </p>
                         </div>
                       </div>
 
                       {selectedImage.metadata?.audio && (
-                        <div className="mb-8 flex items-center gap-3">
-                          <div className="bg-romantic-100/50 p-2.5 rounded-xl">
-                            <Music className="w-5 h-5 text-romantic-500" />
+                        <div className="mb-6 flex items-center gap-2">
+                          <div className="bg-romantic-100/50 p-2 rounded-lg">
+                            <Music className="w-4 h-4 text-romantic-500" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-romantic-300">Nuestra Música</p>
-                            <p className="text-sm font-bold text-gray-700 italic">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300">Nuestra Música</p>
+                            <p className="text-xs font-bold text-gray-700 italic">
                               🎵 {selectedImage.metadata.audio.name || "Nuestra canción especial"}
                             </p>
                           </div>
@@ -2211,7 +2211,7 @@ export default function Home() {
                           <>
                             <button
                               onClick={() => setIsEditing(true)}
-                              className="py-4 rounded-2xl bg-romantic-50 text-romantic-500 text-xs font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2 w-full col-span-2 shadow-sm"
+                              className="py-3 rounded-xl bg-romantic-50 text-romantic-500 text-xs font-bold hover:bg-romantic-100 transition-all flex items-center justify-center gap-2 w-full col-span-2 shadow-sm"
                             >
                               <Pencil className="w-4 h-4" />
                               Editar Texto / Música
@@ -2267,13 +2267,13 @@ export default function Home() {
                         <div className="grid grid-cols-2 gap-3 w-full">
                           <button
                             onClick={compartirRecuerdo}
-                            className="py-4 rounded-2xl bg-romantic-50 text-romantic-600 text-[10px] font-black hover:bg-romantic-100 transition-all flex flex-col items-center justify-center gap-1 border border-romantic-100 shadow-sm leading-tight text-center px-1"
+                            className="py-3 rounded-xl bg-romantic-50 text-romantic-600 text-[9px] font-black hover:bg-romantic-100 transition-all flex flex-col items-center justify-center gap-1 border border-romantic-100 shadow-sm leading-tight text-center px-1"
                           >
-                            <div className="flex items-center gap-2">
-                              <Share2 className="w-4 h-4" />
+                            <div className="flex items-center gap-1.5">
+                              <Share2 className="w-3.5 h-3.5" />
                               <span>VÍDEO PARA REDES</span>
                             </div>
-                            <span className="text-[8px] opacity-60">CON MÚSICA Y TEXTO</span>
+                            <span className="text-[7px] opacity-60">CON MÚSICA Y TEXTO</span>
                           </button>
                           
                           <button
@@ -2284,9 +2284,9 @@ export default function Home() {
                               link.download = `recuerdo-${selectedImage.fecha}.${ext}`;
                               link.click();
                             }}
-                            className="py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
+                            className="py-3 rounded-xl bg-gray-50 text-gray-500 text-xs font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
                           >
-                            <Download className="w-5 h-5" />
+                            <Download className="w-4 h-4" />
                             <span>Descargar</span>
                           </button>
                         </div>
