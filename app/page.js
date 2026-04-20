@@ -701,7 +701,6 @@ export default function Home() {
     const nota = notaParaCompartir || selectedNota;
     if (!nota) return;
 
-    // Aunque sea imagen, mostramos el overlay un momento para que se sienta que está procesando
     setSharingType('image');
     setIsGeneratingVideo(true);
     setVideoProgress(20);
@@ -709,121 +708,123 @@ export default function Home() {
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const width = 1080;
-      const height = 1920; 
-      canvas.width = width;
-      canvas.height = height;
-
-      setVideoProgress(50);
+      // Square format is much better for quotes
+      const size = 1080;
+      canvas.width = size;
+      canvas.height = size;
 
       // Background
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, '#fff5f7');
-      gradient.addColorStop(1, '#ffffff');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Card
-      const cardPadding = 60;
-      const cardY = 120;
-      const cardWidth = width - (cardPadding * 2);
-      const cardHeight = height - (cardY * 2);
-      
-      ctx.shadowColor = 'rgba(248, 74, 126, 0.15)';
-      ctx.shadowBlur = 40;
       ctx.fillStyle = '#ffffff';
-      
-      const radius = 60;
+      ctx.fillRect(0, 0, size, size);
+
+      // Decoration: Soft Pink Circle
+      ctx.fillStyle = '#fff5f7';
       ctx.beginPath();
-      ctx.moveTo(cardPadding + radius, cardY);
-      ctx.arcTo(cardPadding + cardWidth, cardY, cardPadding + cardWidth, cardY + cardHeight, radius);
-      ctx.arcTo(cardPadding + cardWidth, cardY + cardHeight, cardPadding, cardY + cardHeight, radius);
-      ctx.arcTo(cardPadding, cardY + cardHeight, cardPadding, cardY, radius);
-      ctx.arcTo(cardPadding, cardY, cardPadding + cardWidth, cardY, radius);
+      ctx.arc(size * 0.1, size * 0.1, size * 0.3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
 
-      // Decoration Heart
-      ctx.save();
-      ctx.globalAlpha = 0.05;
+      // Quotation Marks
       ctx.fillStyle = '#f84a7e';
-      ctx.font = '800px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('❤', width/2, height/2 + 200);
-      ctx.restore();
+      ctx.font = 'bold 240px Georgia, serif';
+      ctx.fillText('“', 80, 260);
 
-      const textStart = cardY + 150;
+      const margin = 100;
+      const maxWidth = size - (margin * 2);
+      
+      // Dynamic Font Scaling
+      const content = nota.contenido;
+      let fontSize = 65; // Starting font size
+      
+      const getLines = (fSize) => {
+        ctx.font = `italic ${fSize}px Georgia, serif`;
+        const words = content.split(' ');
+        let resLines = [];
+        let currentLine = '';
+        
+        for(let n = 0; n < words.length; n++) {
+          let testLine = currentLine + words[n] + ' ';
+          let metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && n > 0) {
+            resLines.push(currentLine);
+            currentLine = words[n] + ' ';
+          } else {
+            currentLine = testLine;
+          }
+        }
+        resLines.push(currentLine);
+        return resLines;
+      };
+
+      let lines = getLines(fontSize);
+      // Max height for text area is roughly 550px
+      const maxHeight = 580;
+      while (lines.length * (fontSize * 1.3) > maxHeight && fontSize > 28) {
+        fontSize -= 2;
+        lines = getLines(fontSize);
+      }
+
+      setVideoProgress(60);
+
+      // Draw Content
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = `italic ${fontSize}px Georgia, serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      
+      const startY = 320;
+      lines.forEach((line, i) => {
+        ctx.fillText(line.trim(), margin, startY + (i * fontSize * 1.3));
+      });
+
+      // Author & Date (Bottom Right)
+      const infoY = startY + (lines.length * fontSize * 1.3) + 60;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = 'bold 36px Arial, sans-serif';
+      ctx.fillText(nota.autor.toUpperCase(), size - margin, infoY);
+      
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = 'bold 24px Arial, sans-serif';
       const fechaObj = new Date(nota.created_at);
       const dia = fechaObj.getDate();
       const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' });
       const anio = fechaObj.getFullYear();
-      const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      ctx.fillText(`${dia} DE ${mes.toUpperCase()}, ${anio}`, size - margin, infoY + 45);
 
-      // Header
-      ctx.fillStyle = '#f84a7e';
+      // Decoration: Corners or lines like the reference
+      ctx.strokeStyle = '#f84a7e';
+      ctx.lineWidth = 10;
+      // Top Right Corner
       ctx.beginPath();
-      ctx.arc(cardPadding + 100, textStart + 50, 60, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(size - 80, 40);
+      ctx.lineTo(size - 40, 40);
+      ctx.lineTo(size - 40, 80);
+      ctx.stroke();
       
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 50px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(nota.autor[0].toUpperCase(), cardPadding + 100, textStart + 70);
-
+      // Bottom Left Logo/Icon simulation
+      ctx.fillStyle = '#f84a7e';
+      ctx.font = 'bold 40px Arial';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#333333';
-      ctx.font = 'bold 45px Arial';
-      ctx.fillText(nota.autor.toUpperCase(), cardPadding + 180, textStart + 35);
-      
-      ctx.fillStyle = '#f84a7e';
-      ctx.font = 'bold 30px Arial';
-      ctx.fillText(`${dia} ${mes.toUpperCase()} ${anio} • ${hora}`, cardPadding + 180, textStart + 85);
-
-      // Quote Content
-      ctx.fillStyle = '#4b5563';
-      ctx.font = 'italic 48px Arial'; // Un poco más pequeño también en la imagen
-      const words = nota.contenido.split(' ');
-      let line = '';
-      let lineY = textStart + 250;
-      const maxWidth = cardWidth - 160;
-      
-      for(let n = 0; n < words.length; n++) {
-        let testLine = line + words[n] + ' ';
-        let metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          ctx.fillText(line, cardPadding + 100, lineY);
-          line = words[n] + ' ';
-          lineY += 75;
-        } else {
-          line = testLine;
-        }
-      }
-      ctx.fillText(line, cardPadding + 100, lineY);
-
-      ctx.fillStyle = '#f84a7e';
-      ctx.font = 'bold 35px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText("DIARIO DE NUESTRA VIDA ❤️", width/2, cardY + cardHeight - 100);
+      ctx.fillText('❤', 40, size - 40);
 
       setVideoProgress(100);
 
-      // Convert to blob and share/download
       canvas.toBlob(async (blob) => {
-        const file = new File([blob], `nota-${dia}-${mes}.png`, { type: 'image/png' });
+        const file = new File([blob], `nuestro-diario-${Date.now()}.png`, { type: 'image/png' });
         
         try {
           if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
-              title: 'Nota de Amor ❤️',
-              text: 'Una pequeña nota de nuestra historia...'
+              title: 'Un pensamiento para ti ❤️',
+              text: `"${content.substring(0, 50)}..."`
             });
           } else {
-            saveAs(blob, `nota-${dia}-${mes}.png`);
+            saveAs(blob, `nota-amor.png`);
           }
         } catch (err) {
-          console.error("Error sharing image:", err);
-          saveAs(blob, `nota-${dia}-${mes}.png`);
+          console.error("Share error:", err);
+          saveAs(blob, `nota-amor.png`);
         } finally {
           setIsGeneratingVideo(false);
           setVideoProgress(0);
@@ -832,7 +833,7 @@ export default function Home() {
 
     } catch (err) {
       console.error(err);
-      alert("Error al generar la imagen de la nota");
+      alert("Error al generar la imagen");
       setIsGeneratingVideo(false);
     }
   }
