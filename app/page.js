@@ -454,7 +454,7 @@ export default function Home() {
 
   const handleConfirmTrim = (data) => {
     setTrimData(data)
-    setSelectedFiles([trimmingFile])
+    setSelectedFiles([data.blob || trimmingFile])
     setTrimmingFile(null)
     setShowUploadModal(true)
   }
