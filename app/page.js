@@ -1384,13 +1384,13 @@ export default function Home() {
                           <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
                             {isVideo(img.url) ? (
                               <div className="w-full h-full relative">
-                                <video src={img.url} className="w-full h-full object-cover" />
+                                <video src={img.url} crossOrigin="anonymous" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                                   <Play className="text-white w-6 h-6 fill-white" />
                                 </div>
                               </div>
                             ) : (
-                              <img src={img.url} className="w-full h-full object-cover" alt="Story" />
+                              <img src={img.url} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Story" />
                             )}
                           </div>
                           
@@ -1508,9 +1508,9 @@ export default function Home() {
                     <div className="relative w-full h-full bg-white rounded-2xl shadow-md border-4 border-white overflow-hidden flex flex-col group-hover:scale-105 transition-transform duration-500">
                       <div className="flex-1 overflow-hidden relative">
                         {isVideo(historiasDelDia[0].url) ? (
-                          <video src={historiasDelDia[0].url} className="w-full h-full object-cover" />
+                          <video src={historiasDelDia[0].url} crossOrigin="anonymous" className="w-full h-full object-cover" />
                         ) : (
-                          <img src={historiasDelDia[0].url} className="w-full h-full object-cover" alt="Recuerdos pasados" />
+                          <img src={historiasDelDia[0].url} crossOrigin="anonymous" className="w-full h-full object-cover" alt="Recuerdos pasados" />
                         )}
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center">
                           {isVideo(historiasDelDia[0].url) && <Play className="text-white w-10 h-10 fill-white" />}
@@ -1539,13 +1539,13 @@ export default function Home() {
                     <div className="aspect-square overflow-hidden rounded-lg mb-2 relative flex items-center justify-center bg-gray-100">
                       {isVideo(recuerdoDelDia.url) ? (
                         <div className="w-full h-full relative">
-                          <video src={recuerdoDelDia.url} className="w-full h-full object-cover" />
+                          <video src={recuerdoDelDia.url} crossOrigin="anonymous" className="w-full h-full object-cover" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors">
                             <Play className="text-white w-10 h-10 fill-white" />
                           </div>
                         </div>
                       ) : (
-                        <img src={recuerdoDelDia.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
+                        <img src={recuerdoDelDia.url} crossOrigin="anonymous" className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Recuerdo" />
                       )}
                       <div className="absolute top-2 right-2 bg-romantic-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
                         Recuerdo del día
@@ -1588,7 +1588,7 @@ export default function Home() {
                     >
                       {isVideo(img.url) ? (
                         <div className="w-full relative">
-                          <video src={img.url} className="w-full h-auto object-cover rounded-t-3xl" />
+                          <video src={img.url} crossOrigin="anonymous" className="w-full h-auto object-cover rounded-t-3xl" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-all">
                             <div className="bg-white/90 p-4 rounded-full shadow-xl transform transition-transform group-hover:scale-110">
                               <Play className="text-romantic-500 w-8 h-8 fill-romantic-500" />
@@ -1598,6 +1598,7 @@ export default function Home() {
                       ) : (
                         <img 
                           src={img.url} 
+                          crossOrigin="anonymous"
                           className="w-full h-auto object-cover rounded-t-3xl transition-transform duration-500 group-hover:scale-105" 
                           alt="Recuerdo"
                           loading="lazy"

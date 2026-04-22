@@ -93,6 +93,7 @@ export default function VideoPlayer({ src, className = "", trim = null, ...props
       <video
         ref={videoRef}
         src={src}
+        crossOrigin="anonymous"
         className="w-full h-full object-contain"
         onTimeUpdate={handleTimeUpdate}
         onClick={togglePlay}
