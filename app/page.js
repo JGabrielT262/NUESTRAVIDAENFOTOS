@@ -732,26 +732,41 @@ export default function Home() {
       const maxWidth = size - (margin * 2);
       
       // Dynamic Font Scaling
-      const content = nota.contenido;
+      const content = (nota.contenido || "").replace(/\r\n/g, "\n");
       let fontSize = 65; // Starting font size
       
       const getLines = (fSize) => {
         ctx.font = `italic ${fSize}px Georgia, serif`;
-        const words = content.split(' ');
-        let resLines = [];
-        let currentLine = '';
-        
-        for(let n = 0; n < words.length; n++) {
-          let testLine = currentLine + words[n] + ' ';
-          let metrics = ctx.measureText(testLine);
-          if (metrics.width > maxWidth && n > 0) {
-            resLines.push(currentLine);
-            currentLine = words[n] + ' ';
-          } else {
-            currentLine = testLine;
+        const srcLines = content.split("\n");
+        const resLines = [];
+
+        srcLines.forEach((srcLine) => {
+          if (srcLine.trim().length === 0) {
+            resLines.push("");
+            return;
           }
-        }
-        resLines.push(currentLine);
+
+          const leadingSpaces = srcLine.match(/^\s+/)?.[0] || "";
+          const text = srcLine.trim();
+          const words = text.split(/\s+/);
+          let currentLine = leadingSpaces;
+
+          for (let n = 0; n < words.length; n++) {
+            const word = words[n];
+            const candidate =
+              currentLine.trim().length === 0 ? `${leadingSpaces}${word}` : `${currentLine} ${word}`;
+
+            if (ctx.measureText(candidate).width > maxWidth && currentLine.trim().length > 0) {
+              resLines.push(currentLine);
+              currentLine = `${leadingSpaces}${word}`;
+            } else {
+              currentLine = candidate;
+            }
+          }
+
+          resLines.push(currentLine);
+        });
+
         return resLines;
       };
 
@@ -773,7 +788,8 @@ export default function Home() {
       
       const startY = 320;
       lines.forEach((line, i) => {
-        ctx.fillText(line.trim(), margin, startY + (i * fontSize * 1.3));
+        if (line.length === 0) return;
+        ctx.fillText(line, margin, startY + (i * fontSize * 1.3));
       });
 
       // Author & Date (Bottom Right)
@@ -818,7 +834,7 @@ export default function Home() {
             await navigator.share({
               files: [file],
               title: 'Un pensamiento para ti ❤️',
-              text: `"${content.substring(0, 50)}..."`
+              text: content.length > 140 ? `${content.substring(0, 140)}…` : content
             });
           } else {
             saveAs(blob, `nota-amor.png`);
@@ -1262,8 +1278,8 @@ export default function Home() {
       <HeartRain />
       <audio ref={audioRef} className="hidden" />
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-romantic-100 px-6 py-4">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-romantic-100 px-4 sm:px-6 xl:px-12 py-4">
+        <div className="w-full flex items-center justify-between">
           <motion.div 
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -1313,7 +1329,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-6 xl:px-12 pt-8">
+      <main className="w-full px-4 sm:px-6 xl:px-12 pt-8">
         {/* Tabs romantic switcher */}
         <div className="flex justify-center mb-12">
           <div className="bg-white/50 backdrop-blur-md p-2 rounded-[30px] shadow-xl border border-white/40 flex gap-2">
@@ -1556,7 +1572,7 @@ export default function Home() {
                         <Calendar className="w-3 h-3" />
                         {new Date(recuerdoDelDia.fecha + "T00:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
-                      <p className="text-gray-600 text-[11px] italic line-clamp-2">"{recuerdoDelDia.nota || "Te amo mucho"}"</p>
+                      <p className="text-gray-600 text-[11px] italic line-clamp-2">&quot;{recuerdoDelDia.nota || "Te amo mucho"}&quot;</p>
                     </div>
                   </motion.div>
                 )}
@@ -1670,24 +1686,24 @@ export default function Home() {
             </div>
           </>
         ) : (
-          <div className="space-y-8 max-w-4xl mx-auto px-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 bg-white/60 backdrop-blur-md p-6 sm:p-8 rounded-[40px] border border-white/40 shadow-sm transition-all hover:shadow-md">
+          <div className="space-y-8 w-full">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-[28px] border border-white/50 shadow-sm hover:shadow-md transition-all">
               <div className="text-center sm:text-left">
-                <h2 className="text-3xl sm:text-4xl font-black text-gray-800 flex items-center justify-center sm:justify-start gap-4">
-                  Diario de Nosotros <MessageCircleHeart className="w-8 h-8 text-romantic-400 animate-pulse" />
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-800 flex items-center justify-center sm:justify-start gap-3">
+                  Diario de Nosotros <MessageCircleHeart className="w-6 h-6 text-romantic-400 animate-pulse" />
                 </h2>
-                <p className="text-gray-500 mt-2 text-sm sm:text-base">Pequeñas notas de amor, pensamientos o momentos que queremos recordar juntos.</p>
+                <p className="text-gray-500 mt-1.5 text-xs sm:text-sm">Pequeñas notas de amor, pensamientos o momentos que queremos recordar juntos.</p>
               </div>
               <button
                 onClick={() => setShowDiarioModal(true)}
-                className="bg-romantic-500 text-white px-6 py-4 rounded-[22px] font-black text-xs sm:text-sm shadow-xl shadow-romantic-100 hover:bg-romantic-600 transition-all flex items-center gap-2 group whitespace-nowrap"
+                className="bg-gradient-to-r from-romantic-500 to-romantic-600 text-white px-4 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-romantic-100 hover:from-romantic-600 hover:to-romantic-700 transition-all flex items-center gap-2 group whitespace-nowrap active:scale-[0.98]"
               >
-                <PenLine className="w-4 h-4 sm:w-5 h-5 group-hover:rotate-12 transition-transform" />
+                <PenLine className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                 ESCRIBIR NOTA
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <AnimatePresence mode="popLayout">
                 {diario.map((nota, idx) => (
                   <motion.div
@@ -1696,7 +1712,7 @@ export default function Home() {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="bg-white p-6 rounded-[28px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-100/30 transition-all cursor-pointer flex flex-col justify-between"
+                    className="bg-white p-5 rounded-[28px] shadow-sm border border-romantic-50 relative group hover:shadow-xl hover:shadow-romantic-100/30 transition-all cursor-pointer flex flex-col justify-between"
                     onClick={() => setSelectedNota(nota)}
                   >
                     <div>
@@ -1723,8 +1739,8 @@ export default function Home() {
 
                       <div className="relative">
                         <div className="absolute -left-3 top-0 w-1 h-full bg-romantic-100/50 rounded-full" />
-                        <p className="text-gray-600 leading-relaxed italic text-base pr-2 line-clamp-6">
-                          "{nota.contenido}"
+                        <p className="text-gray-600 leading-relaxed italic text-sm sm:text-base pr-2 whitespace-pre-wrap break-words max-h-[9.5rem] overflow-hidden">
+                          &quot;{nota.contenido}&quot;
                         </p>
                       </div>
                     </div>
@@ -1859,7 +1875,7 @@ export default function Home() {
                           {new Date(historiasDelDia[currentDayStoryIdx].fecha + "T00:00:00").getFullYear()}
                         </p>
                         <p className="text-lg italic font-medium max-w-2xl">
-                          "{historiasDelDia[currentDayStoryIdx].nota || "Un momento inolvidable"}"
+                          &quot;{historiasDelDia[currentDayStoryIdx].nota || "Un momento inolvidable"}&quot;
                         </p>
                       </div>
                     </motion.div>
@@ -2216,7 +2232,7 @@ export default function Home() {
                     animate={{ y: 0, opacity: 1 }}
                     className="text-center text-base sm:text-lg italic font-medium leading-tight font-serif drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-4"
                   >
-                    "{historiasOrdenadas[selectedStoryIndex].nota}"
+                    &quot;{historiasOrdenadas[selectedStoryIndex].nota}&quot;
                   </motion.p>
                 )}
                 <div className="mt-6 flex justify-center">
@@ -2341,7 +2357,7 @@ export default function Home() {
                         <div className="bg-romantic-50/50 p-4 rounded-xl border border-romantic-100 italic relative">
                           <MessageSquare className="absolute -top-1.5 -left-1.5 w-4 h-4 text-romantic-200" />
                           <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-                            "{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}"
+                            &quot;{selectedImage.nota || "Un momento que guardaré en mi corazón para siempre."}&quot;
                           </p>
                         </div>
                       </div>
@@ -2805,7 +2821,7 @@ export default function Home() {
                 <div className="relative">
                   <Sparkles className="absolute -top-6 -left-6 w-12 h-12 text-romantic-100/50" />
                   <p className="text-gray-700 font-serif text-lg sm:text-xl leading-relaxed italic pr-6 whitespace-pre-wrap">
-                    "{selectedNota.contenido}"
+                    &quot;{selectedNota.contenido}&quot;
                   </p>
                 </div>
 
@@ -2837,4 +2853,3 @@ export default function Home() {
     </div>
   )
 }
-
