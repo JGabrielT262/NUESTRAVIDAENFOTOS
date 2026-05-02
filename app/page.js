@@ -280,7 +280,7 @@ export default function Home() {
       const { data } = await supabase
         .from('visitas')
         .select('dispositivo, ubicacion, ultima_actividad')
-        .contains('fotos_vistas', [id])
+        .contains('fotos_vistas', JSON.stringify([id]))
         .order('ultima_actividad', { ascending: false });
         
       if (data) {
@@ -329,6 +329,7 @@ export default function Home() {
     try {
       const { data } = await supabase
         .from('visitas')
+        .select('*')
         .order('ultima_actividad', { ascending: false })
         .limit(50);
       if (data) setTodasLasVisitas(data);
