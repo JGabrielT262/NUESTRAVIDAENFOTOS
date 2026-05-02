@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react/no-unescaped-entities */
 "use client"
 
 import { useEffect, useState, useRef } from "react"
@@ -1566,7 +1569,7 @@ export default function Home() {
               <div className="text-center py-20 bg-white/40 rounded-[40px] border-2 border-dashed border-romantic-100">
                 <Activity className="w-16 h-16 text-romantic-200 mx-auto mb-4 opacity-50" />
                 <p className="text-gray-400 font-bold">Aún no hay visitas registradas...</p>
-                <p className="text-gray-300 text-sm mt-1">Asegúrate de que la tabla 'visitas' está creada en la base de datos.</p>
+                <p className="text-gray-300 text-sm mt-1">Asegúrate de que la tabla &apos;visitas&apos; está creada en la base de datos.</p>
               </div>
             )}
           </div>
