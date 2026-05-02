@@ -48,6 +48,7 @@ import {
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
+import { UAParser } from "ua-parser-js"
 import confetti from "canvas-confetti"
 import HeartRain from "@/components/HeartRain"
 import VideoPlayer from "@/components/VideoPlayer"
@@ -212,13 +213,23 @@ export default function Home() {
 
   // --- ANALYTICS TRACKING ---
   function getDeviceModel(userAgent) {
-    if (/android/i.test(userAgent)) {
-      const match = userAgent.match(/Android.*?; (.*?) Build/);
-      return match ? match[1] : "Android";
-    } else if (/iPad/i.test(userAgent)) return "iPad";
-    else if (/iPhone/i.test(userAgent)) return "iPhone";
-    else if (/Macintosh/i.test(userAgent)) return "Mac OS";
-    else if (/Windows/i.test(userAgent)) return "Windows PC";
+    const parser = new UAParser(userAgent);
+    const result = parser.getResult();
+    
+    if (result.device.vendor && result.device.model) {
+      return `${result.device.vendor} ${result.device.model}`;
+    } else if (result.os.name === 'Windows') {
+      return "Windows PC";
+    } else if (result.os.name === 'Mac OS') {
+      return "Mac OS";
+    } else if (result.device.model) {
+      return result.device.model;
+    } else if (result.os.name === 'Android') {
+      return "Android";
+    } else if (result.os.name === 'iOS') {
+      return "iPhone/iPad";
+    }
+    
     return "Dispositivo";
   }
 
