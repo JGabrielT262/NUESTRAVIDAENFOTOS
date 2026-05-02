@@ -244,8 +244,7 @@ export default function Home() {
           .from('visitas')
           .insert([{
             dispositivo,
-            ubicacion,
-            fotos_vistas: []
+            ubicacion
           }])
           .select()
           .single();
@@ -254,6 +253,8 @@ export default function Home() {
           sessionStorage.setItem("visita_session_id", data.id);
           sessionStorage.setItem("visita_session_start", Date.now().toString());
           setSessionId(data.id);
+        } else {
+          console.error("Error al registrar visita:", error);
         }
       } else {
         setSessionId(currentSessionId);
@@ -1473,40 +1474,40 @@ export default function Home() {
 
       <main className="w-full px-4 sm:px-6 xl:px-12 pt-8">
         {/* Tabs romantic switcher */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white/50 backdrop-blur-md p-2 rounded-[30px] shadow-xl border border-white/40 flex gap-2">
+        <div className="flex justify-center mb-8 sm:mb-12 w-full px-2">
+          <div className="bg-white/50 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl sm:rounded-[30px] shadow-xl border border-white/40 flex w-full sm:w-auto overflow-hidden">
             <button
               onClick={() => setActiveTab('album')}
-              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-none py-3 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-sm font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                 activeTab === 'album' 
-                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
-                  : 'text-gray-400 hover:text-romantic-400'
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200 scale-100' 
+                  : 'text-gray-400 hover:text-romantic-400 bg-transparent'
               }`}
             >
-              <ImageIcon className="w-4 h-4" />
-              NUESTRO ÁLBUM
+              <ImageIcon className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="leading-none text-center">NUESTRO<br className="sm:hidden"/> ÁLBUM</span>
             </button>
             <button
               onClick={() => setActiveTab('diario')}
-              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-none py-3 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-sm font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                 activeTab === 'diario' 
-                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
-                  : 'text-gray-400 hover:text-romantic-400'
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200 scale-100' 
+                  : 'text-gray-400 hover:text-romantic-400 bg-transparent'
               }`}
             >
-              <BookHeart className="w-4 h-4" />
-              DIARIO DE AMOR
+              <BookHeart className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="leading-none text-center">DIARIO<br className="sm:hidden"/> DE AMOR</span>
             </button>
             <button
               onClick={() => setActiveTab('estadisticas')}
-              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-none py-3 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-sm font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                 activeTab === 'estadisticas' 
-                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
-                  : 'text-gray-400 hover:text-romantic-400'
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200 scale-100' 
+                  : 'text-gray-400 hover:text-romantic-400 bg-transparent'
               }`}
             >
-              <Activity className="w-4 h-4" />
-              VISITAS
+              <Activity className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="leading-none text-center">VISITAS</span>
             </button>
           </div>
         </div>
