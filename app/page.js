@@ -36,7 +36,12 @@ import {
   BookHeart,
   PenLine,
   MessageCircleHeart,
-  History
+  History,
+  Activity,
+  Smartphone,
+  Globe2,
+  Clock as ClockIcon,
+  Users
 } from "lucide-react"
 import JSZip from "jszip"
 import { saveAs } from "file-saver"
@@ -82,6 +87,12 @@ export default function Home() {
   const [enviandoNota, setEnviandoNota] = useState(false)
   const [selectedNota, setSelectedNota] = useState(null)
   const [sharingType, setSharingType] = useState('video') // 'video' o 'image'
+  
+  // States for analytics / tracking
+  const [sessionId, setSessionId] = useState(null)
+  const [vistasSession, setVistasSession] = useState(new Set())
+  const [todasLasVisitas, setTodasLasVisitas] = useState([])
+  const [visitasFoto, setVisitasFoto] = useState([])
   
   const audioRef = useRef(null)
   const musicInputRef = useRef(null)
@@ -196,6 +207,133 @@ export default function Home() {
     return diffHours <= 48 // Considerar nueva si se subió hace menos de 48h
   }
 
+  // --- ANALYTICS TRACKING ---
+  function getDeviceModel(userAgent) {
+    if (/android/i.test(userAgent)) {
+      const match = userAgent.match(/Android.*?; (.*?) Build/);
+      return match ? match[1] : "Android";
+    } else if (/iPad/i.test(userAgent)) return "iPad";
+    else if (/iPhone/i.test(userAgent)) return "iPhone";
+    else if (/Macintosh/i.test(userAgent)) return "Mac OS";
+    else if (/Windows/i.test(userAgent)) return "Windows PC";
+    return "Dispositivo";
+  }
+
+  async function getLocation() {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      const data = await res.json();
+      if (data.city) return `${data.city}, ${data.country_name}`;
+      return "Ubicación Desconocida";
+    } catch (e) {
+      return "Ubicación Desconocida";
+    }
+  }
+
+  async function iniciarSesionVisita() {
+    try {
+      let currentSessionId = sessionStorage.getItem("visita_session_id");
+      if (!currentSessionId) {
+        const ubicacion = await getLocation();
+        const dispositivo = getDeviceModel(navigator.userAgent);
+        
+        const { data, error } = await supabase
+          .from('visitas')
+          .insert([{
+            dispositivo,
+            ubicacion,
+            fotos_vistas: []
+          }])
+          .select()
+          .single();
+          
+        if (data && !error) {
+          sessionStorage.setItem("visita_session_id", data.id);
+          sessionStorage.setItem("visita_session_start", Date.now().toString());
+          setSessionId(data.id);
+        }
+      } else {
+        setSessionId(currentSessionId);
+      }
+    } catch(e) {
+      console.warn("Analytics no disponible");
+    }
+  }
+
+  useEffect(() => {
+    if (selectedImage && sessionId) {
+      setVistasSession(prev => {
+        const next = new Set(prev);
+        next.add(selectedImage.id);
+        return next;
+      });
+      cargarVisitasFoto(selectedImage.id);
+    }
+  }, [selectedImage, sessionId]);
+
+  async function cargarVisitasFoto(id) {
+    try {
+      const { data } = await supabase
+        .from('visitas')
+        .select('dispositivo, ubicacion, ultima_actividad')
+        .contains('fotos_vistas', [id])
+        .order('ultima_actividad', { ascending: false });
+        
+      if (data) {
+        const unique = [];
+        const devices = new Set();
+        data.forEach(v => {
+          if (!devices.has(v.dispositivo)) {
+            devices.add(v.dispositivo);
+            unique.push(v);
+          }
+        });
+        setVisitasFoto(unique);
+      }
+    } catch (e) {
+      console.warn("No se pudieron cargar visitas de la foto");
+    }
+  }
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const interval = setInterval(async () => {
+      try {
+        const fotosArray = Array.from(vistasSession);
+        let start = parseInt(sessionStorage.getItem("visita_session_start") || Date.now().toString());
+        let duracion = Math.floor((Date.now() - start) / 1000);
+        await supabase
+          .from('visitas')
+          .update({
+            ultima_actividad: new Date().toISOString(),
+            duracion_segundos: duracion,
+            fotos_vistas: fotosArray
+          })
+          .eq('id', sessionId);
+      } catch(e) {}
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [sessionId, vistasSession]);
+
+  useEffect(() => {
+    if (activeTab === 'estadisticas') {
+      cargarEstadisticas();
+    }
+  }, [activeTab]);
+
+  async function cargarEstadisticas() {
+    try {
+      const { data } = await supabase
+        .from('visitas')
+        .order('ultima_actividad', { ascending: false })
+        .limit(50);
+      if (data) setTodasLasVisitas(data);
+    } catch(e) {
+      console.warn("Estadísticas no disponibles");
+    }
+  }
+  // --- FIN ANALYTICS ---
+
   async function obtenerDiario() {
     try {
       const { data, error } = await supabase
@@ -243,6 +381,7 @@ export default function Home() {
     if (authorized) {
       obtenerImagenes()
       obtenerDiario()
+      iniciarSesionVisita()
     }
   }, [authorized])
 
@@ -1355,10 +1494,83 @@ export default function Home() {
               <BookHeart className="w-4 h-4" />
               DIARIO DE AMOR
             </button>
+            <button
+              onClick={() => setActiveTab('estadisticas')}
+              className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                activeTab === 'estadisticas' 
+                  ? 'bg-romantic-500 text-white shadow-lg shadow-romantic-200' 
+                  : 'text-gray-400 hover:text-romantic-400'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              VISITAS
+            </button>
           </div>
         </div>
 
-        {activeTab === 'album' ? (
+        {activeTab === 'estadisticas' ? (
+          <div className="w-full max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-[28px] border border-white/50 shadow-sm">
+              <div className="text-center sm:text-left">
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-800 flex items-center justify-center sm:justify-start gap-3">
+                  Registro de Visitas <Globe2 className="w-6 h-6 text-romantic-400 animate-pulse" />
+                </h2>
+                <p className="text-gray-500 mt-1.5 text-xs sm:text-sm">Conoce desde dónde y qué dispositivos han estado viendo nuestro álbum.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <AnimatePresence>
+                {todasLasVisitas.map((visita, i) => (
+                  <motion.div
+                    key={visita.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="bg-white p-5 rounded-[28px] shadow-sm border border-romantic-50 hover:shadow-xl transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-romantic-50 flex items-center justify-center text-romantic-500">
+                          <Smartphone className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-gray-800 font-black text-sm">{visita.dispositivo}</p>
+                          <div className="flex items-center gap-1.5 text-romantic-400 text-[10px] font-bold mt-0.5 uppercase">
+                            <MapPin className="w-3 h-3" />
+                            <span>{visita.ubicacion}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-4 bg-gray-50 p-3 rounded-2xl">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 font-medium flex items-center gap-1"><ClockIcon className="w-3 h-3"/> Última vez</span>
+                          <span className="font-bold text-gray-700">{new Date(visita.ultima_actividad).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 font-medium flex items-center gap-1"><History className="w-3 h-3"/> Tiempo total</span>
+                          <span className="font-bold text-gray-700">{Math.floor(visita.duracion_segundos / 60)}m {visita.duracion_segundos % 60}s</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 font-medium flex items-center gap-1"><ImageIcon className="w-3 h-3"/> Fotos vistas</span>
+                          <span className="font-bold text-gray-700">{visita.fotos_vistas?.length || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+            {todasLasVisitas.length === 0 && (
+              <div className="text-center py-20 bg-white/40 rounded-[40px] border-2 border-dashed border-romantic-100">
+                <Activity className="w-16 h-16 text-romantic-200 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-400 font-bold">Aún no hay visitas registradas...</p>
+                <p className="text-gray-300 text-sm mt-1">Asegúrate de que la tabla 'visitas' está creada en la base de datos.</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'album' ? (
           <>
             {/* Stories Section - Instagram Style */}
             {imagenes.length > 0 && (
@@ -2375,6 +2587,38 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+
+                      {/* --- PHOTO SESSION TRACKING --- */}
+                      <div className="mt-8 border-t border-romantic-50 pt-6">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-romantic-300 flex items-center gap-2 mb-4">
+                          <Activity className="w-3 h-3" /> Visto por
+                        </p>
+                        {visitasFoto.length > 0 ? (
+                          <div className="space-y-3">
+                            {visitasFoto.map((v, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                <div className="bg-white p-2 rounded-full shadow-sm text-romantic-400">
+                                  <Smartphone className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-xs font-bold text-gray-700">{v.dispositivo}</p>
+                                  <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                                    <MapPin className="w-2.5 h-2.5" /> {v.ubicacion}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5 flex justify-end gap-1"><ClockIcon className="w-2.5 h-2.5"/>Última Vez</p>
+                                  <p className="text-[10px] font-bold text-gray-600">
+                                    {new Date(v.ultima_actividad).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 italic">No hay visitas registradas para esta foto aún.</p>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <div className="space-y-6 mb-8">
